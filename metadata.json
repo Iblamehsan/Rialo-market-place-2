@@ -1,0 +1,8 @@
+{
+  "name": "Remix: Remix: Remix: Remix: Remix: Web3 RWA Marketplace",
+  "description": "A decentralized Real World Asset (RWA) marketplace for browsing and purchasing houses, cars, and other assets on Arbitrum Sepolia.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

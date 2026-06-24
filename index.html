@@ -1,0 +1,3539 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Rialo — Web3 RWA Marketplace</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;1,9..144,400&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS (Vite compiled + CDN backup for standalone capability) -->
+    <link rel="stylesheet" href="/src/index.css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+              serif: ['Fraunces', 'serif'],
+              mono: ['"JetBrains Mono"', 'monospace'],
+            }
+          }
+        }
+      }
+    </script>
+    
+    <!-- Ethers.js v6 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.1/ethers.umd.min.js"></script>
+    
+    <!-- Lucide Icons -->
+    <script src="https://cdn.jsdelivr.net/npm/lucide@0.400.0/dist/umd/lucide.min.js"></script>
+
+    <style>
+      body {
+        background-color: #FAF9F6; /* Luxury Warm Off-white / Alabaster */
+        background-image: radial-gradient(rgba(120, 119, 198, 0.03) 1px, transparent 1px),
+                          radial-gradient(rgba(120, 119, 198, 0.02) 1px, #FAF9F6 1px);
+        background-size: 24px 24px;
+      }
+      .font-serif-luxury {
+        font-family: 'Fraunces', serif;
+      }
+      .rialto-shadow {
+        box-shadow: 0 4px 20px -2px rgba(24, 24, 27, 0.04), 0 2px 8px -1px rgba(24, 24, 27, 0.02);
+      }
+      .rialto-shadow-hover {
+        transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      }
+      .rialto-shadow-hover:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 12px 30px -4px rgba(24, 24, 27, 0.08), 0 4px 12px -2px rgba(24, 24, 27, 0.03);
+      }
+      /* Custom animated glassmorphic scrollbar */
+      ::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+      }
+      ::-webkit-scrollbar-track {
+        background: #FAF9F6;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #E4E4E7;
+        border-radius: 4px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: #D4D4D8;
+      }
+      /* Pulsing animations */
+      @keyframes soft-pulse {
+        0%, 100% { opacity: 1; transform: scale(1); }
+        50% { opacity: 0.8; transform: scale(1.02); }
+      }
+      .pulse-soft {
+        animation: soft-pulse 2s infinite ease-in-out;
+      }
+    </style>
+  </head>
+  <body class="font-sans text-zinc-800 antialiased min-h-screen flex flex-col pb-12">    <!-- NO WEB3 WALLET BANNER -->
+    <div id="noWeb3Banner" class="hidden bg-rose-50 border-b border-rose-200/80 text-rose-900 px-4 py-2.5 text-center transition-all duration-300 relative z-50">
+      <div class="max-w-7xl mx-auto flex items-center justify-center gap-2 text-sm font-medium">
+        <i data-lucide="info" class="w-4 h-4 text-rose-600 shrink-0"></i>
+        <span>No Web3 wallet detected. Please install a Web3 wallet (like <strong class="font-semibold text-rose-950">MetaMask</strong>) and connect to <strong class="font-semibold text-rose-950">Ethereum Sepolia Testnet</strong> to buy assets.</span>
+      </div>
+    </div>
+
+    <!-- WRONG NETWORK TOP BANNER (Sticky warning if connected & on wrong chain) -->
+    <div id="wrongNetworkBanner" class="hidden bg-amber-50 border-b border-amber-200/80 text-amber-900 px-4 py-2.5 text-center transition-all duration-300 relative z-50">
+      <div class="max-w-7xl mx-auto flex items-center justify-center gap-2 text-sm font-medium">
+        <i data-lucide="alert-triangle" class="w-4 h-4 text-amber-600 shrink-0"></i>
+        <span>Wrong network detected. Please switch your wallet to <strong class="font-semibold text-amber-950">Ethereum Sepolia Testnet</strong> to buy assets.</span>
+        <button onclick="switchNetwork()" class="ml-3 bg-amber-900 hover:bg-amber-950 text-white text-xs px-3 py-1 rounded-md font-medium transition shadow-sm hover:shadow-md cursor-pointer">
+          Switch Network
+        </button>
+      </div>
+    </div>
+
+    <!-- MAIN NAVBAR -->
+    <header class="sticky top-0 bg-white/80 backdrop-blur-md border-b border-zinc-200/60 z-40 transition-all">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+        <!-- Logo & Title -->
+        <a href="#" class="flex items-center gap-3.5 group">
+          <div class="w-10 h-10 rounded-xl bg-zinc-950 text-white flex items-center justify-center transition-all group-hover:scale-105 shadow-sm">
+            <!-- Custom Rialo stylized SVG logo matching the uploaded image -->
+            <svg class="w-6 h-6 text-white" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M38 28C38 22.48 42.48 18 48 18H72C77.52 18 82 22.48 82 28C82 33.52 77.52 38 72 38H64C58.48 38 54 42.48 54 48C54 53.52 49.52 58 44 58H28C22.48 58 18 53.52 18 48C18 42.48 22.48 38 28 38H36C41.52 38 46 33.52 46 28V28" fill="currentColor"/>
+              <path d="M54 48C54 42.48 58.48 38 64 38H66C71.52 38 76 42.48 76 48V74C76 79.52 71.52 84 66 84C60.48 84 56 79.52 56 74V64C56 58.48 51.52 54 46 54C40.48 54 36 49.52 36 44" fill="currentColor"/>
+            </svg>
+          </div>
+          <div>
+            <div class="flex items-center gap-1.5">
+              <span class="text-xl font-bold tracking-tight text-zinc-950 font-serif-luxury leading-none">Rialo</span>
+              <span class="text-[9px] bg-zinc-100 text-zinc-800 border border-zinc-200/80 px-1.5 py-0.5 rounded-full font-semibold font-mono tracking-wider">BETA</span>
+            </div>
+            <span class="block text-[10px] uppercase tracking-wider text-zinc-400 font-mono mt-0.5">RWA Marketplace</span>
+          </div>
+        </a>
+
+        <!-- Right: Profile Info & Connect Button -->
+        <div class="flex items-center gap-3">
+          <!-- Connection / Network Info badge -->
+          <div id="networkBadge" class="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border bg-zinc-50 border-zinc-200 text-zinc-500">
+            <span class="w-2 h-2 rounded-full bg-zinc-300"></span>
+            <span id="networkName">Disconnected</span>
+          </div>
+
+          <!-- Identity Card (Rialo Style Profile badge) -->
+          <div id="profileBadge" class="hidden flex items-center gap-2.5 bg-zinc-50 border border-zinc-200/60 pl-2.5 pr-3 py-1.5 rounded-xl text-xs transition hover:bg-zinc-100 relative group">
+            <div class="w-7 h-7 rounded-lg bg-zinc-900/10 border border-zinc-300 flex items-center justify-center text-zinc-700 font-bold tracking-tight font-serif-luxury text-sm overflow-hidden shrink-0">
+              <img id="userAvatar" src="" alt="Avatar" class="w-full h-full object-cover hidden">
+              <span id="userInitial">G</span>
+            </div>
+            <div class="text-left leading-tight">
+              <div class="flex items-center gap-1 cursor-pointer" onclick="openProfileEditModal()">
+                <span id="profileUsername" class="font-medium text-zinc-800 hover:underline">Guest Collector</span>
+                <i data-lucide="user" class="w-3 h-3 text-zinc-400"></i>
+              </div>
+              <span id="profileAddress" class="text-[10px] font-mono text-zinc-400">0x000...0000</span>
+            </div>
+          </div>
+
+          <!-- Connect Wallet Button -->
+          <button id="btnConnectWallet" onclick="connectWallet()" class="bg-zinc-900 hover:bg-zinc-800 text-white text-xs sm:text-sm font-medium px-4 py-2.5 rounded-xl transition shadow-sm hover:shadow-md cursor-pointer flex items-center gap-2">
+            <i data-lucide="wallet" class="w-4 h-4"></i>
+            <span>Connect Wallet</span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <main class="flex-grow max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 w-full">
+      
+      <!-- HERO SECTION -->
+      <section class="mb-12 rounded-3xl bg-white border border-zinc-200/50 p-6 sm:p-10 relative overflow-hidden rialo-shadow">
+        <div class="absolute -right-20 -top-20 w-80 h-80 rounded-full bg-zinc-100/50 blur-3xl pointer-events-none"></div>
+        <div class="absolute -left-20 -bottom-20 w-80 h-80 rounded-full bg-zinc-100/50 blur-3xl pointer-events-none"></div>
+
+        <div class="relative z-10 max-w-3xl">
+          <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-semibold uppercase tracking-wider text-zinc-500 bg-zinc-100 border border-zinc-200 mb-4">
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+            Ethereum Sepolia Testnet
+          </span>
+          <h1 class="text-3xl sm:text-4xl md:text-5xl font-serif-luxury tracking-tight text-zinc-900 leading-[1.1] mb-4">
+            Securitized & Tokenized <br><span class="italic font-normal text-zinc-500">Real World Assets</span>
+          </h1>
+          <!-- Added ehsan RIALO credit linked to x -->
+          <div class="mb-6 flex flex-wrap animate-fade-in">
+            <a href="https://x.com/iblamehsan" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1.5 text-xs text-amber-700 hover:text-amber-800 font-semibold uppercase tracking-wider bg-amber-50 hover:bg-amber-100/80 border border-amber-200/60 px-3.5 py-1.5 rounded-full transition shadow-sm hover:shadow">
+              <i data-lucide="sparkles" class="w-3.5 h-3.5 text-amber-500 animate-pulse"></i>
+              <span>This market place is specially designed and created by ehsan for RIALO</span>
+            </a>
+          </div>
+          <p class="text-sm sm:text-base text-zinc-500 leading-relaxed max-w-xl mb-6">
+            Invest fractionally or acquire whole prime real estate, luxury vehicles, and collector grade collectibles. Experience instant decentralized settlement with high fidelity asset deeds.
+          </p>
+
+          <!-- Metrics Panel -->
+          <div class="grid grid-cols-2 sm:grid-cols-3 gap-6 pt-6 border-t border-zinc-200/80">
+            <div>
+              <span class="block text-2xl font-bold tracking-tight text-zinc-900 font-serif-luxury" id="metricVolume">1.84 ETH</span>
+              <span class="block text-[11px] uppercase tracking-wider text-zinc-400 font-medium">Marketplace Volume</span>
+            </div>
+            <div>
+              <span class="block text-2xl font-bold tracking-tight text-zinc-900 font-serif-luxury" id="metricAssets">8 Assets</span>
+              <span class="block text-[11px] uppercase tracking-wider text-zinc-400 font-medium">Assets Verified</span>
+            </div>
+            <div class="col-span-2 sm:col-span-1">
+              <span class="block text-2xl font-bold tracking-tight text-zinc-900 font-serif-luxury" id="metricStatus">Active</span>
+              <span class="block text-[11px] uppercase tracking-wider text-zinc-400 font-medium">Sepolia State</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- EXPLANATORY NOTICE (IF IN SANDBOX MODE) (Hidden by User Intent) -->
+      <div id="sandboxExplanation" class="hidden"></div>
+
+      <!-- INVESTMENT DASHBOARD & LIVE YIELD TICKER -->
+      <section id="yieldFarmDashboard" class="mb-12 rounded-3xl bg-zinc-950 text-white border border-zinc-800 p-6 sm:p-8 relative overflow-hidden shadow-2xl hidden">
+        <!-- background accent -->
+        <div class="absolute right-0 top-0 w-64 h-64 rounded-full bg-emerald-500/10 blur-3xl pointer-events-none"></div>
+        <div class="absolute left-0 bottom-0 w-64 h-64 rounded-full bg-amber-500/5 blur-3xl pointer-events-none"></div>
+
+        <div class="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div class="space-y-1.5">
+            <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider text-emerald-400 bg-emerald-500/10 border border-emerald-500/20">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+              Live Yield Accrual Active
+            </span>
+            <h2 class="text-xl sm:text-2xl font-bold tracking-tight font-serif-luxury text-zinc-50">Rialo Portfolio Vault & Yield Farm</h2>
+            <p class="text-xs text-zinc-400 max-w-xl">Every fraction of a real-world asset you hold on Rialo generates ongoing rental and lease dividend distributions. Watch your yields accumulate in real-time below.</p>
+          </div>
+
+          <button onclick="claimYields()" id="claimYieldBtn" class="bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-semibold text-xs px-5 py-3 rounded-xl transition shadow-lg hover:shadow-emerald-500/10 cursor-pointer flex items-center gap-2 self-start md:self-auto shrink-0">
+            <i data-lucide="coins" class="w-4 h-4 text-zinc-950"></i>
+            <span>Claim Accrued Yield (<span id="claimableAmountText">0.00000000</span> ETH)</span>
+          </button>
+        </div>
+
+        <!-- Metrics cards -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-6 pt-6 border-t border-zinc-800/80">
+          <div class="p-4 rounded-2xl bg-zinc-900 border border-zinc-800/60 flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-zinc-800/80 flex items-center justify-center text-zinc-400 border border-zinc-700/30">
+              <i data-lucide="briefcase" class="w-5 h-5"></i>
+            </div>
+            <div>
+              <span class="block text-[10px] uppercase tracking-wider text-zinc-500 font-medium">Portfolio Holdings</span>
+              <span id="dashboardHoldingsCount" class="block text-base font-bold font-serif-luxury text-zinc-200">0 Assets</span>
+            </div>
+          </div>
+
+          <div class="p-4 rounded-2xl bg-zinc-900 border border-zinc-800/60 flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-zinc-800/80 flex items-center justify-center text-zinc-400 border border-zinc-700/30">
+              <i data-lucide="trending-up" class="w-5 h-5 text-emerald-400"></i>
+            </div>
+            <div>
+              <span class="block text-[10px] uppercase tracking-wider text-zinc-500 font-medium">Avg Portfolio Yield</span>
+              <span id="dashboardAvgYield" class="block text-base font-bold font-serif-luxury text-zinc-200">0.0% ROI</span>
+            </div>
+          </div>
+
+          <div class="p-4 rounded-2xl bg-zinc-900 border border-zinc-800/60 flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-zinc-800/80 flex items-center justify-center text-emerald-400 border border-emerald-500/20">
+              <i data-lucide="refresh-cw" class="w-5 h-5 animate-spin" style="animation-duration: 8s"></i>
+            </div>
+            <div>
+              <span class="block text-[10px] uppercase tracking-wider text-zinc-500 font-medium">Real-Time Accrued Returns</span>
+              <span id="dashboardAccruedReturns" class="block text-base font-mono font-bold text-emerald-400">0.00000000 ETH</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Custom List of Holdings inside Dashboard -->
+        <div id="dashboardHoldingsListContainer" class="mt-6 hidden">
+          <span class="block text-[10px] uppercase tracking-wider text-zinc-500 font-bold mb-3">My Share Certificates</span>
+          <div id="dashboardHoldingsList" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            <!-- Rendered by JS -->
+          </div>
+        </div>
+      </section>
+
+      <!-- MARKETPLACE ACTIONS & FILTERS -->
+      <div class="mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <!-- Category Filters -->
+        <div class="flex items-center gap-1.5 bg-white p-1 rounded-xl border border-zinc-200/80 shadow-sm text-xs max-w-max">
+          <button onclick="filterAssets('all')" id="filterBtn_all" class="px-3.5 py-2 rounded-lg font-medium transition cursor-pointer bg-zinc-900 text-white shadow-sm">
+            All Assets
+          </button>
+          <button onclick="filterAssets('House')" id="filterBtn_House" class="px-3.5 py-2 rounded-lg font-medium transition cursor-pointer text-zinc-500 hover:text-zinc-900">
+            Houses 🏠
+          </button>
+          <button onclick="filterAssets('Car')" id="filterBtn_Car" class="px-3.5 py-2 rounded-lg font-medium transition cursor-pointer text-zinc-500 hover:text-zinc-900">
+            Cars 🚗
+          </button>
+          <button onclick="filterAssets('Other')" id="filterBtn_Other" class="px-3.5 py-2 rounded-lg font-medium transition cursor-pointer text-zinc-500 hover:text-zinc-900">
+            Other 💎
+          </button>
+          <button onclick="filterAssets('MyPurchases')" id="filterBtn_MyPurchases" class="px-3.5 py-2 rounded-lg font-medium transition cursor-pointer text-zinc-500 hover:text-zinc-900">
+            My Purchases 🔑
+          </button>
+        </div>
+
+        <!-- Create / List button -->
+        <button onclick="openCreateAssetModal()" class="inline-flex items-center gap-1.5 bg-white hover:bg-zinc-50 text-zinc-900 text-xs font-semibold px-4 py-3 rounded-xl transition border border-zinc-200/80 shadow-sm cursor-pointer ml-auto sm:ml-0">
+          <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+          <span>List RWA Token</span>
+        </button>
+      </div>
+
+      <!-- ASSETS GRID -->
+      <div id="assetsGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        <!-- Rendered dynamically by javascript -->
+      </div>
+
+      <!-- NO ASSETS STATE -->
+      <div id="noAssetsState" class="hidden flex-col items-center justify-center text-center py-24 bg-white rounded-3xl border border-zinc-200/60 max-w-xl mx-auto p-8 rialto-shadow">
+        <div class="w-16 h-16 rounded-2xl bg-zinc-50 flex items-center justify-center text-zinc-400 mb-4 border border-zinc-200/40">
+          <i data-lucide="filter" id="noAssetsIcon" class="w-8 h-8"></i>
+        </div>
+        <h3 id="noAssetsTitle" class="text-lg font-bold text-zinc-900 font-serif-luxury">No matching assets found</h3>
+        <p id="noAssetsDesc" class="text-sm text-zinc-500 mt-1 max-w-xs">There are no RWAs currently matching this category filter. Please list a new one or clear filters.</p>
+        <button id="noAssetsActBtn" onclick="filterAssets('all')" class="mt-4 text-xs font-medium bg-zinc-950 hover:bg-zinc-800 text-white px-4 py-2 rounded-lg transition cursor-pointer">
+          Reset Filter
+        </button>
+      </div>
+
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="mt-20 border-t border-zinc-200/50 py-12 bg-white">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col items-center justify-center gap-6 text-center">
+        <!-- Logo -->
+        <div class="flex flex-col items-center gap-1.5">
+          <div class="flex items-center gap-2">
+            <!-- Stylized Rialo SVG icon -->
+            <svg class="w-6 h-6 text-zinc-900" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M38 28C38 22.48 42.48 18 48 18H72C77.52 18 82 22.48 82 28C82 33.52 77.52 38 72 38H64C58.48 38 54 42.48 54 48C54 53.52 49.52 58 44 58H28C22.48 58 18 53.52 18 48C18 42.48 22.48 38 28 38H36C41.52 38 46 33.52 46 28V28" fill="currentColor"/>
+              <path d="M54 48C54 42.48 58.48 38 64 38H66C71.52 38 76 42.48 76 48V74C76 79.52 71.52 84 66 84C60.48 84 56 79.52 56 74V64C56 58.48 51.52 54 46 54C40.48 54 36 49.52 36 44" fill="currentColor"/>
+            </svg>
+            <span class="font-serif-luxury font-bold text-zinc-900 text-lg tracking-wider">Rialo</span>
+            <span class="text-zinc-300">/</span>
+            <span class="text-xs text-zinc-500 font-medium tracking-wide uppercase">Premium RWA Ledger</span>
+          </div>
+          <p class="text-[11px] text-zinc-400">Tokenized ownership, fractional titles, and certified physical property deeds on-chain.</p>
+        </div>
+
+        <!-- Created by Ehsan Banner -->
+        <div class="p-4 bg-zinc-50 border border-zinc-200/60 rounded-2xl max-w-lg w-full flex items-center justify-center gap-2.5 transition hover:bg-zinc-100/80">
+          <i data-lucide="sparkles" class="w-4 h-4 text-amber-500 animate-pulse shrink-0"></i>
+          <span class="text-xs text-zinc-600 font-medium">
+            This marketplace is specially designed and created by 
+            <a href="https://x.com/iblamehsan" target="_blank" rel="noopener noreferrer" class="text-zinc-950 font-semibold hover:underline inline-flex items-center gap-1 group">
+              ehsan <i data-lucide="twitter" class="w-3.5 h-3.5 text-zinc-400 group-hover:text-[#1DA1F2] transition"></i>
+            </a> 
+            for <span class="font-bold text-zinc-950 font-serif-luxury tracking-wide">RIALO</span>
+          </span>
+        </div>
+
+        <!-- Etherscan status -->
+        <div class="flex flex-col sm:flex-row items-center justify-between gap-4 w-full border-t border-zinc-100 pt-6 text-[11px] text-zinc-400">
+          <div>
+            <span>&copy; 2026 Rialo. Real World Assets dApp</span>
+          </div>
+          <div class="flex items-center gap-4">
+            <span class="flex items-center gap-1">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> 
+              Ethereum Sepolia: Live
+            </span>
+            <span class="text-zinc-300">|</span>
+            <a href="https://sepolia.etherscan.io" target="_blank" class="hover:text-zinc-600 transition flex items-center gap-0.5">
+              Etherscan Explorer <i data-lucide="external-link" class="w-3 h-3"></i>
+            </a>
+          </div>
+        </div>
+      </div>
+    </footer>
+
+
+    <!-- MODALS SECTION -->
+
+    <!-- VIEW ASSET MODAL -->
+    <div id="viewAssetModal" class="hidden fixed inset-0 bg-zinc-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div class="bg-white rounded-3xl border border-zinc-200/80 w-full max-w-2xl overflow-hidden shadow-2xl relative flex flex-col max-h-[90vh]">
+        
+        <!-- Header Image area -->
+        <div class="h-64 sm:h-80 w-full relative shrink-0 bg-zinc-100">
+          <img id="modalAssetImage" src="" alt="Asset Image" class="w-full h-full object-cover">
+          <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
+          
+          <!-- Close button -->
+          <button onclick="closeModal('viewAssetModal')" class="absolute top-4 right-4 bg-white/95 hover:bg-white text-zinc-800 hover:text-zinc-950 w-8 h-8 rounded-full flex items-center justify-center shadow transition-all cursor-pointer">
+            <i data-lucide="x" class="w-4 h-4"></i>
+          </button>
+
+          <!-- Absolute Title Overlay -->
+          <div class="absolute bottom-4 left-6 right-6 text-white">
+            <span id="modalAssetCategory" class="inline-block bg-white/25 backdrop-blur-sm border border-white/20 text-white text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded mb-1">House</span>
+            <h2 id="modalAssetTitle" class="text-xl sm:text-2xl md:text-3xl font-serif-luxury tracking-tight font-medium">Malibu Mansion</h2>
+          </div>
+        </div>
+
+        <!-- Tabs Selector -->
+        <div class="px-6 pt-3 border-b border-zinc-100 flex gap-4 shrink-0 text-[11px] font-semibold uppercase tracking-wider text-zinc-400">
+          <button id="modalTabBtn_info" onclick="switchModalTab('info')" class="pb-2.5 border-b-2 border-zinc-950 text-zinc-950 transition cursor-pointer flex items-center gap-1">
+            <i data-lucide="info" class="w-3.5 h-3.5"></i>
+            <span>Information</span>
+          </button>
+          <button id="modalTabBtn_calculator" onclick="switchModalTab('calculator')" class="pb-2.5 border-b-2 border-transparent hover:text-zinc-800 transition cursor-pointer flex items-center gap-1">
+            <i data-lucide="calculator" class="w-3.5 h-3.5"></i>
+            <span>Fractional Calculator</span>
+          </button>
+          <button id="modalTabBtn_deed" onclick="switchModalTab('deed')" class="pb-2.5 border-b-2 border-transparent hover:text-zinc-800 transition cursor-pointer flex items-center gap-1">
+            <i data-lucide="award" class="w-3.5 h-3.5"></i>
+            <span>On-Chain Deed</span>
+          </button>
+        </div>
+
+        <!-- Scrollable Details -->
+        <div class="p-6 overflow-y-auto space-y-6 flex-grow">
+          <!-- TAB 1: INFORMATION & SPECS -->
+          <div id="modalTabContent_info" class="space-y-6">
+            <!-- Description -->
+            <div>
+              <h4 class="text-xs uppercase tracking-wider text-zinc-400 font-semibold mb-1">Asset Description</h4>
+              <p id="modalAssetDescription" class="text-sm text-zinc-600 leading-relaxed">
+                Detailed description of the Real World Asset (RWA) goes here.
+              </p>
+            </div>
+
+            <!-- Specifications Grid -->
+            <div class="grid grid-cols-2 sm:grid-cols-3 gap-4 p-4 rounded-2xl bg-zinc-50 border border-zinc-200/80 text-xs">
+              <div>
+                <span class="block text-zinc-400">Location / Storage</span>
+                <strong id="modalAssetLocation" class="block font-medium text-zinc-800 mt-0.5">Malibu, CA</strong>
+              </div>
+              <div>
+                <span class="block text-zinc-400" id="modalSpecHeader">Specs / Metrics</span>
+                <strong id="modalAssetSpecs" class="block font-medium text-zinc-800 mt-0.5">4,500 Sqft</strong>
+              </div>
+              <div>
+                <span class="block text-zinc-400">Contract Address</span>
+                <span id="modalContractAddress" class="block font-mono text-zinc-500 mt-0.5 select-all hover:text-zinc-900 cursor-pointer">0x4c216...4E828</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- TAB 2: FRACTIONAL CALCULATOR -->
+          <div id="modalTabContent_calculator" class="space-y-5 hidden">
+            <div class="bg-zinc-50 border border-zinc-200/60 rounded-2xl p-4 space-y-4">
+              <div class="flex items-center justify-between">
+                <label class="block text-xs font-semibold uppercase tracking-wider text-zinc-500" for="calcBudgetInput">Investment Budget (ETH)</label>
+                <span class="font-mono text-xs font-bold text-zinc-800" id="calcBudgetDisplay">0.001 ETH</span>
+              </div>
+              
+              <!-- Interactive slider & number input -->
+              <div class="space-y-3">
+                <input type="range" id="calcBudgetSlider" min="0.0001" max="0.1" step="0.0001" value="0.001" oninput="updateFractionalCalculator(this.value)" class="w-full h-1.5 bg-zinc-200 rounded-lg appearance-none cursor-pointer accent-zinc-950">
+                <div class="relative">
+                  <input type="number" step="0.0001" min="0.0001" id="calcBudgetInput" oninput="updateFractionalCalculator(this.value)" value="0.001" class="w-full bg-white border border-zinc-200 rounded-xl px-3.5 py-2.5 text-xs focus:outline-none focus:border-zinc-900 transition font-mono font-medium">
+                  <span class="absolute right-4 top-2.5 text-xs text-zinc-400 font-medium">ETH</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Calculated Metrics -->
+            <div class="grid grid-cols-2 gap-3.5">
+              <div class="p-3.5 rounded-xl border border-zinc-150 bg-white shadow-sm">
+                <span class="block text-[10px] uppercase tracking-wider text-zinc-400 font-medium">Ownership Share</span>
+                <span id="calcSharePct" class="block text-lg font-bold text-zinc-900 font-serif-luxury mt-0.5">0.00%</span>
+                <span class="block text-[9px] text-zinc-400 mt-0.5" id="calcShareLabel">Micro-Stake</span>
+              </div>
+              <div class="p-3.5 rounded-xl border border-zinc-150 bg-white shadow-sm">
+                <span class="block text-[10px] uppercase tracking-wider text-zinc-400 font-medium">Minted Shares</span>
+                <span id="calcTokensQty" class="block text-lg font-mono font-bold text-zinc-900 mt-0.5">0 SHARES</span>
+                <span class="block text-[9px] text-zinc-400 mt-0.5">$RIALO-SHARES</span>
+              </div>
+              <div class="p-3.5 rounded-xl border border-zinc-150 bg-white shadow-sm">
+                <span class="block text-[10px] uppercase tracking-wider text-zinc-400 font-medium">Projected ROI</span>
+                <span id="calcRoiPct" class="block text-lg font-bold text-emerald-600 font-serif-luxury mt-0.5">0.0%</span>
+                <span class="block text-[9px] text-zinc-400 mt-0.5" id="calcRoiLabel">Annual Yield Rate</span>
+              </div>
+              <div class="p-3.5 rounded-xl border border-zinc-150 bg-white shadow-sm">
+                <span class="block text-[10px] uppercase tracking-wider text-zinc-400 font-medium">Est. Returns / Year</span>
+                <span id="calcEstReturns" class="block text-lg font-mono font-bold text-emerald-600 mt-0.5">0.0000 ETH</span>
+                <span class="block text-[9px] text-zinc-400 mt-0.5" id="calcMonthlyEst">~0.00000 ETH / mo</span>
+              </div>
+            </div>
+
+            <div class="text-[11px] text-zinc-400 leading-normal flex items-start gap-1.5 p-3 rounded-xl bg-zinc-50 border border-zinc-150">
+              <i data-lucide="info" class="w-4 h-4 text-zinc-400 shrink-0 mt-0.5"></i>
+              <span>Projected yield is distributed continuously based on legal rental/leasing revenues from physical assets on-chain.</span>
+            </div>
+          </div>
+
+          <!-- TAB 3: CRYPTOGRAPHIC DEED -->
+          <div id="modalTabContent_deed" class="space-y-4 hidden">
+            <div class="flex justify-center p-1 bg-zinc-900 rounded-3xl overflow-hidden border border-zinc-800 shadow-2xl relative group">
+              <!-- Cert SVG Container -->
+              <div id="svgDeedCertificateContainer" class="w-full">
+                <!-- SVG injected dynamically by JS -->
+              </div>
+            </div>
+            
+            <div class="flex justify-between items-center text-[10px] font-mono text-zinc-400 px-1">
+              <span>Security Stamp: Verified</span>
+              <a href="#" id="deedIpfsLink" target="_blank" class="hover:text-zinc-800 transition flex items-center gap-0.5">
+                Inspect IPFS Metadata <i data-lucide="external-link" class="w-3 h-3"></i>
+              </a>
+            </div>
+          </div>
+
+          <!-- Blockchain Ownership Status with RWA Collector Profile -->
+          <div class="border-t border-zinc-100 pt-5 space-y-3">
+            <div class="flex justify-between items-center">
+              <span class="block text-xs font-semibold uppercase tracking-wider text-zinc-400">Registered Asset Owner</span>
+              <span id="modalAssetPrice" class="block text-lg font-bold text-zinc-900 font-serif-luxury">0.15 ETH</span>
+            </div>
+            
+            <div id="modalOwnerProfileCard" class="p-4 rounded-2xl bg-zinc-50 border border-zinc-200/60 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div class="flex items-start gap-3 overflow-hidden">
+                <img id="modalOwnerPhoto" src="" alt="Owner Photo" class="w-12 h-12 rounded-xl object-cover border border-zinc-200 shadow-sm shrink-0 bg-zinc-200">
+                <div class="space-y-1 overflow-hidden">
+                  <div class="flex items-center gap-1.5 flex-wrap">
+                    <span id="modalOwnerName" class="text-xs font-bold text-zinc-900 font-serif-luxury">Sovereign Asset Holdings</span>
+                    <span id="modalOwnerAddress" class="text-[9px] font-mono text-zinc-400 bg-zinc-200/40 px-1.5 py-0.5 rounded border border-zinc-200">0x32A...E47b</span>
+                  </div>
+                  <p id="modalOwnerBio" class="text-[11px] text-zinc-500 leading-normal line-clamp-2">Swiss-regulated custody fund and institutional manager for top-tier ultra-luxury properties.</p>
+                </div>
+              </div>
+              
+              <!-- Owner's Social Links (Only those marked Public are displayed, unless it's the current user) -->
+              <div id="modalOwnerSocials" class="flex flex-wrap gap-1.5 sm:justify-end shrink-0 max-w-[160px]">
+                <!-- Dynamic social icons with tooltips or badges -->
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Footer purchase actions -->
+        <div class="p-4 bg-zinc-50 border-t border-zinc-200/60 flex items-center justify-between gap-4 shrink-0">
+          <div class="text-xs text-zinc-500 max-w-sm hidden sm:block">
+            Transaction executed on <strong class="text-zinc-700">Ethereum Sepolia</strong>. Buy instantly with automatic title delegation.
+          </div>
+          <button id="modalBuyBtn" onclick="" class="w-full sm:w-auto bg-zinc-900 hover:bg-zinc-800 text-white font-medium text-sm px-6 py-3 rounded-xl transition shadow cursor-pointer flex items-center justify-center gap-2">
+            <i data-lucide="tag" class="w-4 h-4"></i>
+            <span>Buy RWA Asset</span>
+          </button>
+        </div>
+
+      </div>
+    </div>
+
+
+    <!-- LIST NEW ASSET MODAL -->
+    <div id="createAssetModal" class="hidden fixed inset-0 bg-zinc-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div class="bg-white rounded-3xl border border-zinc-200/80 w-full max-w-md overflow-hidden shadow-2xl relative flex flex-col">
+        
+        <!-- Header -->
+        <div class="p-6 pb-4 border-b border-zinc-200/60 flex items-center justify-between">
+          <div>
+            <h3 class="text-lg font-bold text-zinc-900 font-serif-luxury">List Real World Asset</h3>
+            <p class="text-xs text-zinc-400">Deed minting & tokenization entry</p>
+          </div>
+          <button onclick="closeModal('createAssetModal')" class="bg-zinc-100 hover:bg-zinc-200 text-zinc-600 hover:text-zinc-950 w-7 h-7 rounded-full flex items-center justify-center transition cursor-pointer">
+            <i data-lucide="x" class="w-4 h-4"></i>
+          </button>
+        </div>
+
+        <!-- Header -->
+        <div class="p-6 pb-4 border-b border-zinc-200/60 flex items-center justify-between">
+          <div>
+            <h3 class="text-lg font-bold text-zinc-900 font-serif-luxury">List Real World Asset</h3>
+            <p class="text-xs text-zinc-400">Deed minting & tokenization entry</p>
+          </div>
+          <button onclick="closeModal('createAssetModal')" class="bg-zinc-100 hover:bg-zinc-200 text-zinc-600 hover:text-zinc-950 w-7 h-7 rounded-full flex items-center justify-center transition cursor-pointer">
+            <i data-lucide="x" class="w-4 h-4"></i>
+          </button>
+        </div>
+
+        <!-- Wizard Progress Bar Header -->
+        <div class="px-6 py-3 flex items-center justify-between border-b border-zinc-100 bg-zinc-50/50">
+          <div class="flex items-center gap-1.5">
+            <span id="wizardStepBadge_1" class="w-5 h-5 rounded-full bg-zinc-900 text-white text-[10px] font-bold flex items-center justify-center">1</span>
+            <span id="wizardStepLabel_1" class="text-[10px] font-semibold text-zinc-900 uppercase tracking-wider">Valuation</span>
+          </div>
+          <div class="w-6 h-0.5 bg-zinc-200" id="wizardStepLine_1"></div>
+          <div class="flex items-center gap-1.5">
+            <span id="wizardStepBadge_2" class="w-5 h-5 rounded-full bg-zinc-100 text-zinc-400 text-[10px] font-bold flex items-center justify-center">2</span>
+            <span id="wizardStepLabel_2" class="text-[10px] font-semibold text-zinc-400 uppercase tracking-wider">Media</span>
+          </div>
+          <div class="w-6 h-0.5 bg-zinc-200" id="wizardStepLine_2"></div>
+          <div class="flex items-center gap-1.5">
+            <span id="wizardStepBadge_3" class="w-5 h-5 rounded-full bg-zinc-100 text-zinc-400 text-[10px] font-bold flex items-center justify-center">3</span>
+            <span id="wizardStepLabel_3" class="text-[10px] font-semibold text-zinc-400 uppercase tracking-wider">Compliance</span>
+          </div>
+        </div>
+
+        <!-- Form Body -->
+        <form id="createAssetForm" onsubmit="handleCreateAssetSubmit(event)" class="p-6 space-y-4 flex-grow flex flex-col justify-between">
+          
+          <!-- STEP 1: ASSET VALUE & CORE DETAILS -->
+          <div id="listStep_1" class="space-y-4">
+            <!-- Title -->
+            <div>
+              <label class="block text-xs font-semibold uppercase tracking-wider text-zinc-400 mb-1.5" for="assetTitle">Asset Title</label>
+              <input type="text" id="assetTitle" required placeholder="e.g. Sunset Heights Villa" class="w-full bg-zinc-50 border border-zinc-200/80 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:border-zinc-900 transition font-medium">
+            </div>
+
+            <!-- Grid: Category & Price -->
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label class="block text-xs font-semibold uppercase tracking-wider text-zinc-400 mb-1.5" for="assetType">Category</label>
+                <select id="assetType" onchange="onCategorySelectChange()" class="w-full bg-zinc-50 border border-zinc-200/80 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:border-zinc-900 transition font-medium">
+                  <option value="House">House 🏠</option>
+                  <option value="Car">Car 🚗</option>
+                  <option value="Other">Other 💎</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-xs font-semibold uppercase tracking-wider text-zinc-400 mb-1.5" for="assetPriceInput">Price (ETH)</label>
+                <input type="number" step="0.001" min="0.001" id="assetPriceInput" required placeholder="0.10" class="w-full bg-zinc-50 border border-zinc-200/80 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:border-zinc-900 transition font-mono font-medium">
+              </div>
+            </div>
+          </div>
+
+          <!-- STEP 2: MEDIA & DESCRIPTION -->
+          <div id="listStep_2" class="space-y-4 hidden">
+            <!-- Specs / Location -->
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label class="block text-xs font-semibold uppercase tracking-wider text-zinc-400 mb-1.5" for="assetLocationInput" id="locLabel">Location</label>
+                <input type="text" id="assetLocationInput" placeholder="e.g. Aspen, Colorado" class="w-full bg-zinc-50 border border-zinc-200/80 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:border-zinc-900 transition font-medium">
+              </div>
+              <div>
+                <label class="block text-xs font-semibold uppercase tracking-wider text-zinc-400 mb-1.5" for="assetSpecsInput" id="specsLabel">Sqft Size</label>
+                <input type="text" id="assetSpecsInput" placeholder="e.g. 3,200 sqft" class="w-full bg-zinc-50 border border-zinc-200/80 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:border-zinc-900 transition font-medium">
+              </div>
+            </div>
+
+            <!-- Image Select Presets (Highly Interactive!) -->
+            <div>
+              <label class="block text-xs font-semibold uppercase tracking-wider text-zinc-400 mb-1.5">Cover Image Preset</label>
+              <div class="grid grid-cols-4 gap-2 mb-2" id="presetImagesContainer">
+                <!-- Rendered by JS, lets user select from curated beautiful photos -->
+              </div>
+              <div class="relative">
+                <input type="url" id="assetImageUrl" placeholder="Or paste a custom image URL..." class="w-full bg-zinc-50 border border-zinc-200/80 rounded-xl px-3.5 py-2 text-[11px] focus:outline-none focus:border-zinc-900 transition">
+              </div>
+            </div>
+
+            <!-- Description -->
+            <div>
+              <label class="block text-xs font-semibold uppercase tracking-wider text-zinc-400 mb-1.5" for="assetDesc">Description</label>
+              <textarea id="assetDesc" rows="2" placeholder="Describe the physical asset, collateral details, ownership yield structures..." class="w-full bg-zinc-50 border border-zinc-200/80 rounded-xl px-3.5 py-2 text-xs focus:outline-none focus:border-zinc-900 transition font-medium"></textarea>
+            </div>
+          </div>
+
+          <!-- STEP 3: COMPLIANCE CHECKLIST & DEED MINT -->
+          <div id="listStep_3" class="space-y-4 hidden text-xs">
+            
+            <!-- Legal checklist boxes -->
+            <div class="space-y-2.5">
+              <span class="block text-xs font-bold uppercase tracking-wider text-zinc-400 mb-1">RWA Legal Compliance Checks</span>
+              
+              <div onclick="tickComplianceCheck('custody')" class="flex items-start gap-2.5 p-2.5 rounded-xl border border-zinc-200 hover:border-zinc-300 bg-zinc-50/50 hover:bg-zinc-100 cursor-pointer transition">
+                <input type="checkbox" id="complianceCheck_custody" class="mt-0.5 rounded text-zinc-900 focus:ring-zinc-950 border-zinc-300 cursor-pointer pointer-events-none">
+                <div class="leading-tight">
+                  <span class="block font-semibold text-zinc-800">Physical Custody Audited & Verified</span>
+                  <span class="block text-[10px] text-zinc-400 mt-0.5">Asset manager certifies physical existence & secure vaulting parameters.</span>
+                </div>
+              </div>
+
+              <div onclick="tickComplianceCheck('insurance')" class="flex items-start gap-2.5 p-2.5 rounded-xl border border-zinc-200 hover:border-zinc-300 bg-zinc-50/50 hover:bg-zinc-100 cursor-pointer transition">
+                <input type="checkbox" id="complianceCheck_insurance" class="mt-0.5 rounded text-zinc-900 focus:ring-zinc-950 border-zinc-300 cursor-pointer pointer-events-none">
+                <div class="leading-tight">
+                  <span class="block font-semibold text-zinc-800">Insurance Coverage Active</span>
+                  <span class="block text-[10px] text-zinc-400 mt-0.5">Full replacement-cost coverage underwritten by accredited insurance trustee.</span>
+                </div>
+              </div>
+
+              <div onclick="tickComplianceCheck('legal')" class="flex items-start gap-2.5 p-2.5 rounded-xl border border-zinc-200 hover:border-zinc-300 bg-zinc-50/50 hover:bg-zinc-100 cursor-pointer transition">
+                <input type="checkbox" id="complianceCheck_legal" class="mt-0.5 rounded text-zinc-900 focus:ring-zinc-950 border-zinc-300 cursor-pointer pointer-events-none">
+                <div class="leading-tight">
+                  <span class="block font-semibold text-zinc-800">Title Security Legally Tokenized</span>
+                  <span class="block text-[10px] text-zinc-400 mt-0.5">Corporate legal trust wrapper set up to enable proportional fraction claim pass-through.</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Drag and Drop property registry files -->
+            <div class="space-y-1.5">
+              <span class="block text-xs font-bold uppercase tracking-wider text-zinc-400">Upload Property deed or vault receipt</span>
+              <div id="wizardDeedDropZone" 
+                   class="border-2 border-dashed border-zinc-200 hover:border-zinc-400 rounded-xl p-4 text-center cursor-pointer transition bg-zinc-50/50 hover:bg-zinc-100 flex flex-col items-center justify-center min-h-[90px] relative">
+                
+                <div id="wizardScanPlaceholder" class="flex flex-col items-center">
+                  <i data-lucide="upload-cloud" class="w-5 h-5 text-zinc-500 mb-1"></i>
+                  <span class="text-[11px] font-medium text-zinc-700">Drag property title files here or browse</span>
+                  <span class="text-[9px] text-zinc-400 mt-0.5">Runs security scanner validator (PDF, PNG)</span>
+                </div>
+
+                <div id="wizardScanProgressContainer" class="w-full hidden space-y-2">
+                  <div class="flex items-center justify-between text-[10px] font-semibold text-zinc-500">
+                    <span id="wizardScanStatusText">Scanning document signatures...</span>
+                    <span id="wizardScanPercent">0%</span>
+                  </div>
+                  <div class="w-full h-1.5 bg-zinc-100 rounded-full overflow-hidden border border-zinc-200/50">
+                    <div id="wizardScanProgressBar" class="h-full bg-zinc-900 transition-all duration-100" style="width: 0%"></div>
+                  </div>
+                </div>
+
+                <div id="wizardScanSuccessContainer" class="hidden flex flex-col items-center">
+                  <span class="text-[10px] text-emerald-600 font-bold flex items-center gap-1">
+                    <i data-lucide="shield-check" class="w-4 h-4 text-emerald-500"></i>
+                    Deed Signature Verified!
+                  </span>
+                  <span id="scannedFileInfoText" class="text-[9px] text-zinc-400 mt-1">doc_id: 0x82f...a1e9</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- IPFS Minting progress panel -->
+            <div id="ipfsMintProgressContainer" class="hidden p-3.5 rounded-2xl bg-zinc-900 text-white border border-zinc-800 space-y-2">
+              <div class="flex items-center justify-between text-[10px] font-mono text-zinc-400">
+                <span id="ipfsStatusText">Deploying metadata to IPFS...</span>
+                <span id="ipfsPercent">0%</span>
+              </div>
+              <div class="w-full h-1 bg-zinc-800 rounded-full overflow-hidden">
+                <div id="ipfsProgressBar" class="h-full bg-emerald-500 transition-all duration-100" style="width: 0%"></div>
+              </div>
+              <span id="ipfsGeneratedHash" class="block text-[8px] font-mono text-zinc-500 truncate mt-1">cid: generating...</span>
+            </div>
+          </div>
+
+          <!-- Wizard Controls Footer -->
+          <div class="pt-4 border-t border-zinc-150 flex items-center justify-between gap-3 mt-4">
+            <button type="button" id="wizardBackBtn" onclick="switchWizardStep(state.currentListingStep - 1)" class="px-4 py-2.5 rounded-xl border border-zinc-200 hover:border-zinc-300 text-zinc-600 font-medium text-xs transition cursor-pointer hidden">
+              Back
+            </button>
+            <button type="button" id="wizardNextBtn" onclick="switchWizardStep(state.currentListingStep + 1)" class="w-full bg-zinc-900 hover:bg-zinc-800 text-white font-medium text-xs py-3 rounded-xl transition shadow cursor-pointer text-center">
+              Next Step
+            </button>
+            <button type="submit" id="wizardSubmitBtn" class="w-full bg-zinc-950 hover:bg-zinc-900 text-white font-semibold text-xs py-3 rounded-xl transition shadow cursor-pointer flex items-center justify-center gap-1.5 hidden">
+              <i data-lucide="award" class="w-4 h-4"></i>
+              <span>Mint Title & List Asset</span>
+            </button>
+          </div>
+
+        </form>
+      </div>
+    </div>
+
+
+    <!-- EDIT PROFILE MODAL -->
+    <div id="profileEditModal" class="hidden fixed inset-0 bg-zinc-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
+      <div class="bg-white rounded-3xl border border-zinc-200/80 w-full max-w-lg overflow-hidden shadow-2xl relative flex flex-col max-h-[90vh]">
+        <div class="p-6 pb-4 border-b border-zinc-200/60 flex items-center justify-between shrink-0">
+          <div>
+            <h3 class="text-lg font-bold text-zinc-900 font-serif-luxury">Investor Profile Credential</h3>
+            <!-- Added ehsan RIALO credit linked to x -->
+            <div class="mt-1 flex">
+              <a href="https://x.com/iblamehsan" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 text-[10px] text-amber-700 hover:text-amber-800 font-semibold uppercase tracking-wider bg-amber-50 hover:bg-amber-100/80 border border-amber-200/60 px-2 py-0.5 rounded-full transition">
+                <i data-lucide="sparkles" class="w-3.5 h-3.5 text-amber-500 animate-pulse"></i>
+                <span>This market place is specially designed and created by ehsan for RIALO</span>
+              </a>
+            </div>
+            <p class="text-xs text-zinc-400 mt-1">Update your identity and privacy permissions</p>
+          </div>
+          <button onclick="closeModal('profileEditModal')" class="bg-zinc-100 hover:bg-zinc-200 text-zinc-500 w-7 h-7 rounded-full flex items-center justify-center transition cursor-pointer">
+            <i data-lucide="x" class="w-4 h-4"></i>
+          </button>
+        </div>
+        
+        <form id="editProfileForm" onsubmit="handleProfileEditSubmit(event)" class="p-6 space-y-4 overflow-y-auto flex-grow text-xs">
+          <!-- Profile Photo Upload -->
+          <div>
+            <label class="block text-xs font-semibold uppercase tracking-wider text-zinc-400 mb-1.5">Profile Photo <span class="text-rose-500">*</span></label>
+            <label id="editPhotoDropZone" for="editPhotoFileInput" class="border-2 border-dashed border-zinc-200 hover:border-zinc-400 rounded-2xl p-4 text-center cursor-pointer transition bg-zinc-50/50 hover:bg-zinc-50 flex flex-col items-center justify-center min-h-[110px] relative">
+              <input type="file" id="editPhotoFileInput" accept="image/*" class="sr-only">
+              <div id="editPhotoUploadPreviewContainer" class="flex flex-col items-center">
+                <img id="editProfilePhotoPreview" src="" alt="Profile Preview" class="w-14 h-14 rounded-full object-cover border-2 border-zinc-900 shadow-sm mb-1.5 bg-zinc-100">
+                <span class="text-[10px] text-zinc-500 font-medium">Click or drag a new photo to change</span>
+              </div>
+            </label>
+          </div>
+
+          <!-- Name -->
+          <div>
+            <label class="block text-xs font-semibold uppercase tracking-wider text-zinc-400 mb-1.5" for="editNameInput">Your Name <span class="text-rose-500">*</span></label>
+            <input type="text" id="editNameInput" required maxlength="24" placeholder="e.g. Ehsan Al-Maktoum" class="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-3.5 py-2.5 text-xs focus:outline-none focus:border-zinc-900 transition font-medium text-zinc-800">
+          </div>
+
+          <!-- Bio -->
+          <div>
+            <div class="flex items-center justify-between mb-1.5">
+              <label class="block text-xs font-semibold uppercase tracking-wider text-zinc-400" for="editBioInput">Biography</label>
+              <button type="button" id="privacyBtnEditBio" onclick="toggleEditSocialPrivacy('bio')" class="text-[10px] font-medium transition cursor-pointer flex items-center gap-1 text-emerald-600 hover:underline">
+                <i data-lucide="eye" class="w-3 h-3"></i> <span id="privacyBtnEditBioText">Public</span>
+              </button>
+            </div>
+            <textarea id="editBioInput" rows="2" maxlength="150" placeholder="Describe your collector interests..." class="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-3.5 py-2 text-xs focus:outline-none focus:border-zinc-900 transition font-medium text-zinc-800"></textarea>
+          </div>
+
+          <!-- Social Credentials & Privacy Toggles -->
+          <div>
+            <div class="flex items-center justify-between mb-2">
+              <label class="block text-xs font-semibold uppercase tracking-wider text-zinc-400">Social Connections</label>
+              <span class="text-[10px] text-zinc-400">Public/Private Access</span>
+            </div>
+            
+            <div class="space-y-2">
+              <!-- X -->
+              <div class="flex items-center gap-2">
+                <div class="flex items-center gap-2 bg-zinc-50 border border-zinc-200 rounded-xl px-3 py-2 flex-grow">
+                  <i data-lucide="twitter" class="w-3.5 h-3.5 text-zinc-400 shrink-0"></i>
+                  <input type="text" id="editSocialX" placeholder="X username" class="bg-transparent border-none p-0 w-full text-xs focus:outline-none font-medium text-zinc-700">
+                </div>
+                <button type="button" id="editPrivacyBtnX" onclick="toggleEditSocialPrivacy('x')" class="shrink-0 px-3 py-2 rounded-xl border border-zinc-200 text-[11px] font-medium transition cursor-pointer flex items-center gap-1.5 min-w-[85px] justify-center bg-emerald-50 border-emerald-200 text-emerald-700">
+                  <i data-lucide="eye" class="w-3.5 h-3.5"></i> <span>Public</span>
+                </button>
+              </div>
+
+              <!-- Discord -->
+              <div class="flex items-center gap-2">
+                <div class="flex items-center gap-2 bg-zinc-50 border border-zinc-200 rounded-xl px-3 py-2 flex-grow">
+                  <i data-lucide="message-square" class="w-3.5 h-3.5 text-zinc-400 shrink-0"></i>
+                  <input type="text" id="editSocialDiscord" placeholder="Discord Tag" class="bg-transparent border-none p-0 w-full text-xs focus:outline-none font-medium text-zinc-700">
+                </div>
+                <button type="button" id="editPrivacyBtnDiscord" onclick="toggleEditSocialPrivacy('discord')" class="shrink-0 px-3 py-2 rounded-xl border border-zinc-200 text-[11px] font-medium transition cursor-pointer flex items-center gap-1.5 min-w-[85px] justify-center bg-emerald-50 border-emerald-200 text-emerald-700">
+                  <i data-lucide="eye" class="w-3.5 h-3.5"></i> <span>Public</span>
+                </button>
+              </div>
+
+              <!-- GitHub -->
+              <div class="flex items-center gap-2">
+                <div class="flex items-center gap-2 bg-zinc-50 border border-zinc-200 rounded-xl px-3 py-2 flex-grow">
+                  <i data-lucide="github" class="w-3.5 h-3.5 text-zinc-400 shrink-0"></i>
+                  <input type="text" id="editSocialGithub" placeholder="GitHub username" class="bg-transparent border-none p-0 w-full text-xs focus:outline-none font-medium text-zinc-700">
+                </div>
+                <button type="button" id="editPrivacyBtnGithub" onclick="toggleEditSocialPrivacy('github')" class="shrink-0 px-3 py-2 rounded-xl border border-zinc-200 text-[11px] font-medium transition cursor-pointer flex items-center gap-1.5 min-w-[85px] justify-center bg-emerald-50 border-emerald-200 text-emerald-700">
+                  <i data-lucide="eye" class="w-3.5 h-3.5"></i> <span>Public</span>
+                </button>
+              </div>
+
+              <!-- Instagram -->
+              <div class="flex items-center gap-2">
+                <div class="flex items-center gap-2 bg-zinc-50 border border-zinc-200 rounded-xl px-3 py-2 flex-grow">
+                  <i data-lucide="instagram" class="w-3.5 h-3.5 text-zinc-400 shrink-0"></i>
+                  <input type="text" id="editSocialInstagram" placeholder="Instagram username" class="bg-transparent border-none p-0 w-full text-xs focus:outline-none font-medium text-zinc-700">
+                </div>
+                <button type="button" id="editPrivacyBtnInstagram" onclick="toggleEditSocialPrivacy('instagram')" class="shrink-0 px-3 py-2 rounded-xl border border-zinc-200 text-[11px] font-medium transition cursor-pointer flex items-center gap-1.5 min-w-[85px] justify-center bg-emerald-50 border-emerald-200 text-emerald-700">
+                  <i data-lucide="eye" class="w-3.5 h-3.5"></i> <span>Public</span>
+                </button>
+              </div>
+
+              <!-- LinkedIn -->
+              <div class="flex items-center gap-2">
+                <div class="flex items-center gap-2 bg-zinc-50 border border-zinc-200 rounded-xl px-3 py-2 flex-grow">
+                  <i data-lucide="linkedin" class="w-3.5 h-3.5 text-zinc-400 shrink-0"></i>
+                  <input type="text" id="editSocialLinkedin" placeholder="LinkedIn Name/Link" class="bg-transparent border-none p-0 w-full text-xs focus:outline-none font-medium text-zinc-700">
+                </div>
+                <button type="button" id="editPrivacyBtnLinkedin" onclick="toggleEditSocialPrivacy('linkedin')" class="shrink-0 px-3 py-2 rounded-xl border border-zinc-200 text-[11px] font-medium transition cursor-pointer flex items-center gap-1.5 min-w-[85px] justify-center bg-emerald-50 border-emerald-200 text-emerald-700">
+                  <i data-lucide="eye" class="w-3.5 h-3.5"></i> <span>Public</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Wallet info -->
+          <div class="p-3.5 rounded-2xl bg-zinc-50 border border-zinc-200/60">
+            <span class="block text-[10px] text-zinc-400 uppercase tracking-wider font-semibold">Active Collector Wallet</span>
+            <span id="editWalletAddressDisplay" class="block font-mono text-xs text-zinc-600 mt-1 truncate select-all">0x000...0000</span>
+          </div>
+
+          <!-- Save Button -->
+          <button type="submit" class="w-full bg-zinc-900 hover:bg-zinc-800 text-white font-semibold text-xs py-3 rounded-xl transition shadow cursor-pointer">
+            Save Profile Credentials
+          </button>
+        </form>
+      </div>
+    </div>
+
+
+    <!-- ONBOARDING PROFILE SCREEN (BLOCKER OVERLAY UNTIL JOINED) -->
+    <div id="onboardingOverlay" class="fixed inset-0 bg-[#FAF9F6] z-50 flex items-center justify-center p-4 overflow-y-auto">
+      <div class="absolute inset-0 bg-zinc-900/5 backdrop-blur-sm pointer-events-none"></div>
+      <div class="bg-white rounded-3xl border border-zinc-200/80 w-full max-w-lg p-6 sm:p-8 shadow-2xl relative my-auto flex flex-col gap-5 z-10 max-h-[95vh] overflow-y-auto">
+        
+        <!-- Header -->
+        <div class="text-center">
+          <div class="w-12 h-12 rounded-2xl bg-zinc-900 text-white flex items-center justify-center mx-auto mb-3 animate-bounce">
+            <i data-lucide="user-check" class="w-6 h-6"></i>
+          </div>
+          <h2 class="text-2xl font-bold tracking-tight text-zinc-900 font-serif-luxury">Establish Your RWA Identity</h2>
+          <!-- Added ehsan RIALO credit linked to x -->
+          <div class="mt-2.5 mb-1.5 flex justify-center">
+            <a href="https://x.com/iblamehsan" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1.5 text-[11px] text-amber-700 hover:text-amber-800 font-semibold uppercase tracking-wider bg-amber-50 hover:bg-amber-100/80 border border-amber-200/60 px-3 py-1 rounded-full transition shadow-sm hover:shadow">
+              <i data-lucide="sparkles" class="w-3.5 h-3.5 text-amber-500 animate-pulse"></i>
+              <span>This market place is specially designed and created by ehsan for RIALO</span>
+            </a>
+          </div>
+          <p class="text-xs text-zinc-500 mt-1 max-w-sm mx-auto">Create your premium investor profile to browse, list, and fractionalize real-world certified physical assets.</p>
+        </div>
+
+        <form id="onboardingForm" onsubmit="handleOnboardingSubmit(event)" class="space-y-4 text-xs">
+          
+          <!-- Profile Photo Upload (Optional) -->
+          <div>
+            <label class="block text-xs font-semibold uppercase tracking-wider text-zinc-400 mb-1.5">Profile Photo <span class="text-zinc-300 font-normal">(Optional - Premium Abstract Art Provided)</span></label>
+            
+            <label id="photoDropZone" for="photoFileInput" class="border-2 border-dashed border-zinc-200 hover:border-zinc-400 rounded-2xl p-4 text-center cursor-pointer transition bg-zinc-50/50 hover:bg-zinc-100 flex flex-col items-center justify-center min-h-[120px] relative">
+              <input type="file" id="photoFileInput" accept="image/*" class="sr-only">
+              <div id="photoUploadPlaceholder" class="flex flex-col items-center">
+                <div class="w-9 h-9 rounded-xl bg-zinc-100 flex items-center justify-center text-zinc-500 mb-2">
+                  <i data-lucide="upload-cloud" class="w-5 h-5"></i>
+                </div>
+                <span class="text-xs font-medium text-zinc-700">Drag & drop photo here, or click to browse</span>
+                <span class="text-[10px] text-zinc-400 mt-0.5">Supports PNG, JPG, WebP. Max 2MB.</span>
+              </div>
+              
+              <!-- Preview -->
+              <div id="photoUploadPreviewContainer" class="hidden flex flex-col items-center">
+                <img id="onboardingPhotoPreview" src="" alt="Profile Preview" class="w-16 h-16 rounded-full object-cover border-2 border-zinc-900 shadow-sm mb-2">
+                <span class="text-[10px] text-emerald-600 font-semibold flex items-center gap-1">
+                  <i data-lucide="check" class="w-3.5 h-3.5"></i> Photo Selected successfully!
+                </span>
+                <button type="button" onclick="resetOnboardingPhoto(event)" class="text-[10px] text-rose-500 hover:underline mt-1">Remove photo</button>
+              </div>
+            </label>
+          </div>
+
+          <!-- Name / Username (MANDATORY) -->
+          <div>
+            <label class="block text-xs font-semibold uppercase tracking-wider text-zinc-400 mb-1.5" for="onboardingNameInput">Collector Name <span class="text-rose-500">*</span></label>
+            <input type="text" id="onboardingNameInput" required maxlength="24" placeholder="e.g. Ehsan Al-Maktoum" class="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-3.5 py-2.5 text-xs focus:outline-none focus:border-zinc-900 transition font-medium text-zinc-800">
+          </div>
+
+          <!-- Bio -->
+          <div>
+            <div class="flex items-center justify-between mb-1.5">
+              <label class="block text-xs font-semibold uppercase tracking-wider text-zinc-400" for="onboardingBioInput">Biography <span class="text-zinc-300 font-normal">(Optional)</span></label>
+              <button type="button" id="privacyBtnBio" onclick="toggleSocialPrivacy('bio')" class="text-[10px] font-medium transition cursor-pointer flex items-center gap-1 text-emerald-600 hover:underline">
+                <i data-lucide="eye" class="w-3 h-3"></i> <span id="privacyBtnBioText">Public</span>
+              </button>
+            </div>
+            <textarea id="onboardingBioInput" rows="2" maxlength="150" placeholder="e.g. Real-world asset investor & fractional yield strategist on Sepolia." class="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-3.5 py-2 text-xs focus:outline-none focus:border-zinc-900 transition font-medium text-zinc-800"></textarea>
+          </div>
+
+          <!-- Associated Wallet Address -->
+          <div class="p-3.5 rounded-2xl bg-zinc-50 border border-zinc-200/60 flex items-center justify-between text-xs">
+            <div class="truncate mr-3">
+              <span class="block text-[10px] text-zinc-400 uppercase tracking-wider font-semibold">Verified Wallet Address</span>
+              <span id="onboardingWalletAddress" class="block font-mono text-zinc-600 mt-0.5 truncate select-all">Not Connected (Guest Mode)</span>
+            </div>
+            <button type="button" id="onboardingConnectBtn" onclick="connectWallet()" class="shrink-0 bg-zinc-900 hover:bg-zinc-800 text-white text-[11px] px-3 py-1.5 rounded-lg font-medium transition cursor-pointer flex items-center gap-1">
+              <i data-lucide="wallet" class="w-3 h-3"></i>
+              <span>Connect</span>
+            </button>
+          </div>
+
+          <!-- Social Credentials & Privacy Toggles -->
+          <div>
+            <div class="flex items-center justify-between mb-2">
+              <label class="block text-xs font-semibold uppercase tracking-wider text-zinc-400">Social Connections & Privacy Settings</label>
+              <span class="text-[10px] text-zinc-400">Set Public / Private</span>
+            </div>
+            
+            <div class="space-y-2">
+              <!-- X -->
+              <div class="flex items-center gap-2">
+                <div class="flex items-center gap-2 bg-zinc-50 border border-zinc-200 rounded-xl px-3 py-2 flex-grow">
+                  <i data-lucide="twitter" class="w-3.5 h-3.5 text-zinc-400 shrink-0"></i>
+                  <input type="text" id="socialX" placeholder="X handle (e.g. @username)" class="bg-transparent border-none p-0 w-full text-xs focus:outline-none font-medium text-zinc-700">
+                </div>
+                <button type="button" id="privacyBtnX" onclick="toggleSocialPrivacy('x')" class="shrink-0 px-3 py-2 rounded-xl border border-zinc-200 text-[11px] font-medium transition cursor-pointer flex items-center gap-1.5 min-w-[85px] justify-center bg-emerald-50 border-emerald-200 text-emerald-700">
+                  <i data-lucide="eye" class="w-3.5 h-3.5"></i> <span>Public</span>
+                </button>
+              </div>
+
+              <!-- Discord -->
+              <div class="flex items-center gap-2">
+                <div class="flex items-center gap-2 bg-zinc-50 border border-zinc-200 rounded-xl px-3 py-2 flex-grow">
+                  <i data-lucide="message-square" class="w-3.5 h-3.5 text-zinc-400 shrink-0"></i>
+                  <input type="text" id="socialDiscord" placeholder="Discord Tag (e.g. user#1234)" class="bg-transparent border-none p-0 w-full text-xs focus:outline-none font-medium text-zinc-700">
+                </div>
+                <button type="button" id="privacyBtnDiscord" onclick="toggleSocialPrivacy('discord')" class="shrink-0 px-3 py-2 rounded-xl border border-zinc-200 text-[11px] font-medium transition cursor-pointer flex items-center gap-1.5 min-w-[85px] justify-center bg-emerald-50 border-emerald-200 text-emerald-700">
+                  <i data-lucide="eye" class="w-3.5 h-3.5"></i> <span>Public</span>
+                </button>
+              </div>
+
+              <!-- GitHub -->
+              <div class="flex items-center gap-2">
+                <div class="flex items-center gap-2 bg-zinc-50 border border-zinc-200 rounded-xl px-3 py-2 flex-grow">
+                  <i data-lucide="github" class="w-3.5 h-3.5 text-zinc-400 shrink-0"></i>
+                  <input type="text" id="socialGithub" placeholder="GitHub Profile Username" class="bg-transparent border-none p-0 w-full text-xs focus:outline-none font-medium text-zinc-700">
+                </div>
+                <button type="button" id="privacyBtnGithub" onclick="toggleSocialPrivacy('github')" class="shrink-0 px-3 py-2 rounded-xl border border-zinc-200 text-[11px] font-medium transition cursor-pointer flex items-center gap-1.5 min-w-[85px] justify-center bg-emerald-50 border-emerald-200 text-emerald-700">
+                  <i data-lucide="eye" class="w-3.5 h-3.5"></i> <span>Public</span>
+                </button>
+              </div>
+
+              <!-- Instagram -->
+              <div class="flex items-center gap-2">
+                <div class="flex items-center gap-2 bg-zinc-50 border border-zinc-200 rounded-xl px-3 py-2 flex-grow">
+                  <i data-lucide="instagram" class="w-3.5 h-3.5 text-zinc-400 shrink-0"></i>
+                  <input type="text" id="socialInstagram" placeholder="Instagram Username" class="bg-transparent border-none p-0 w-full text-xs focus:outline-none font-medium text-zinc-700">
+                </div>
+                <button type="button" id="privacyBtnInstagram" onclick="toggleSocialPrivacy('instagram')" class="shrink-0 px-3 py-2 rounded-xl border border-zinc-200 text-[11px] font-medium transition cursor-pointer flex items-center gap-1.5 min-w-[85px] justify-center bg-emerald-50 border-emerald-200 text-emerald-700">
+                  <i data-lucide="eye" class="w-3.5 h-3.5"></i> <span>Public</span>
+                </button>
+              </div>
+
+              <!-- LinkedIn -->
+              <div class="flex items-center gap-2">
+                <div class="flex items-center gap-2 bg-zinc-50 border border-zinc-200 rounded-xl px-3 py-2 flex-grow">
+                  <i data-lucide="linkedin" class="w-3.5 h-3.5 text-zinc-400 shrink-0"></i>
+                  <input type="text" id="socialLinkedin" placeholder="LinkedIn URL or Handle" class="bg-transparent border-none p-0 w-full text-xs focus:outline-none font-medium text-zinc-700">
+                </div>
+                <button type="button" id="privacyBtnLinkedin" onclick="toggleSocialPrivacy('linkedin')" class="shrink-0 px-3 py-2 rounded-xl border border-zinc-200 text-[11px] font-medium transition cursor-pointer flex items-center gap-1.5 min-w-[85px] justify-center bg-emerald-50 border-emerald-200 text-emerald-700">
+                  <i data-lucide="eye" class="w-3.5 h-3.5"></i> <span>Public</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Join Action -->
+          <button type="submit" class="w-full bg-zinc-900 hover:bg-zinc-800 text-white font-semibold text-xs py-3.5 rounded-xl transition shadow hover:shadow-md cursor-pointer mt-2 flex items-center justify-center gap-1.5">
+            <span>Verify & Join RWA Marketplace</span>
+            <i data-lucide="arrow-right" class="w-4 h-4"></i>
+          </button>
+        </form>
+      </div>
+    </div>
+
+
+    <!-- TRANSACTION LOADING DIALOG -->
+    <div id="txLoadingModal" class="hidden fixed inset-0 bg-zinc-900/50 backdrop-blur-md z-50 flex items-center justify-center p-4">
+      <div class="bg-white rounded-3xl border border-zinc-200/80 w-full max-w-sm p-8 text-center shadow-2xl relative">
+        <div class="flex flex-col items-center">
+          <!-- Spinner -->
+          <div class="relative w-16 h-16 mb-6">
+            <div class="absolute inset-0 rounded-full border-4 border-zinc-100"></div>
+            <div class="absolute inset-0 rounded-full border-4 border-zinc-900 border-t-transparent animate-spin"></div>
+            <div class="absolute inset-0 flex items-center justify-center text-zinc-900">
+              <i data-lucide="loader" class="w-5 h-5 animate-pulse"></i>
+            </div>
+          </div>
+          
+          <h3 class="text-lg font-bold text-zinc-900 font-serif-luxury">Executing Sepolia Transaction</h3>
+          <p id="txLoadingMessage" class="text-xs text-zinc-500 mt-2 max-w-xs">
+            Confirm and wait for block validation. Please do not close this window.
+          </p>
+
+          <!-- Simulating steps indicator -->
+          <div class="mt-6 w-full max-w-xs bg-zinc-50 rounded-2xl border border-zinc-200/60 p-3.5 space-y-2 text-left text-[11px] font-mono">
+            <div class="flex items-center gap-2" id="txStep1">
+              <span class="w-2 h-2 rounded-full bg-zinc-300" id="txStep1Dot"></span>
+              <span class="text-zinc-500" id="txStep1Text">Broadcasting contract call...</span>
+            </div>
+            <div class="flex items-center gap-2" id="txStep2">
+              <span class="w-2 h-2 rounded-full bg-zinc-300" id="txStep2Dot"></span>
+              <span class="text-zinc-500" id="txStep2Text">Consensus validations...</span>
+            </div>
+            <div class="flex items-center gap-2" id="txStep3">
+              <span class="w-2 h-2 rounded-full bg-zinc-300" id="txStep3Dot"></span>
+              <span class="text-zinc-500" id="txStep3Text">Title registration deed update...</span>
+            </div>
+          </div>
+
+          <!-- Mock Transaction Hash indicator (if sandbox or real) -->
+          <div class="mt-4 text-[10px] text-zinc-400 font-mono flex items-center gap-1.5" id="txHashBadge">
+            <span>Tx Hash:</span>
+            <span id="loadingTxHash" class="text-zinc-600 select-all">Generative...</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+
+    <!-- TRANSACTION SUCCESS MODAL -->
+    <div id="txSuccessModal" class="hidden fixed inset-0 bg-zinc-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div class="bg-white rounded-3xl border border-zinc-200/80 w-full max-w-sm p-6 text-center shadow-2xl relative">
+        <div class="flex flex-col items-center">
+          <div class="w-14 h-14 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center border border-emerald-100 mb-4 pulse-soft">
+            <i data-lucide="check-circle" class="w-7 h-7"></i>
+          </div>
+
+          <h3 class="text-xl font-bold text-zinc-900 font-serif-luxury">Ownership Transferred</h3>
+          <p class="text-xs text-zinc-500 mt-2">
+            The smart contract has cleared payment and re-assigned ownership of the physical asset.
+          </p>
+
+          <!-- Asset details -->
+          <div class="w-full bg-zinc-50 border border-zinc-200/60 rounded-2xl p-4 my-5 flex items-center gap-3 text-left">
+            <img id="successAssetImage" src="" alt="Asset" class="w-12 h-12 rounded-xl object-cover shrink-0 bg-zinc-200">
+            <div class="overflow-hidden leading-tight">
+              <span id="successAssetTitle" class="block font-medium text-zinc-800 text-xs truncate">Malibu Mansion</span>
+              <span id="successAssetCategory" class="block text-[10px] uppercase tracking-wider text-zinc-400 mt-0.5">House</span>
+              <span class="block text-[11px] font-mono text-zinc-600 mt-1 font-semibold" id="successAssetPrice">0.15 ETH</span>
+            </div>
+          </div>
+
+          <!-- Transaction details -->
+          <div class="w-full space-y-1.5 text-[11px] border-t border-zinc-100 pt-4 text-left">
+            <div class="flex justify-between">
+              <span class="text-zinc-400">Network:</span>
+              <span class="font-medium text-zinc-700" id="successNetworkName">Ethereum Sepolia</span>
+            </div>
+            <div class="flex justify-between items-center">
+              <span class="text-zinc-400">Transaction Hash:</span>
+              <div class="flex items-center gap-1">
+                <a href="#" id="successTxLink" target="_blank" class="font-mono text-zinc-600 hover:text-zinc-950 hover:underline flex items-center gap-0.5">
+                  <span id="successTxHash">0x000...0000</span>
+                  <i data-lucide="external-link" class="w-3 h-3 text-zinc-400"></i>
+                </a>
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-6 flex flex-col gap-2 w-full">
+            <a id="shareXLink" href="#" target="_blank" rel="noopener noreferrer" class="w-full bg-[#1DA1F2] hover:bg-[#1a8cd8] text-white font-medium text-xs py-3 rounded-xl transition shadow cursor-pointer flex items-center justify-center gap-2">
+              <i data-lucide="twitter" class="w-3.5 h-3.5"></i>
+              <span>Share Purchase on X</span>
+            </a>
+            <button onclick="closeModal('txSuccessModal')" class="w-full bg-zinc-900 hover:bg-zinc-800 text-white font-medium text-xs py-3 rounded-xl transition shadow cursor-pointer">
+              Continue Browsing
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+
+    <!-- WEB3 ERROR MODAL -->
+    <div id="web3ErrorModal" class="hidden fixed inset-0 bg-zinc-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div class="bg-white rounded-3xl border border-zinc-200/80 w-full max-w-sm p-6 shadow-2xl relative flex flex-col items-center text-center">
+        <!-- Error Icon -->
+        <div class="w-12 h-12 rounded-full bg-rose-50 border border-rose-100 flex items-center justify-center text-rose-500 mb-4 shrink-0">
+          <i data-lucide="alert-triangle" class="w-6 h-6"></i>
+        </div>
+        
+        <h3 class="text-base font-bold text-zinc-900 font-serif-luxury">Transaction Failed</h3>
+        <p id="web3ErrorMessage" class="text-xs text-zinc-500 mt-2 leading-relaxed">
+          The Web3 transaction on Ethereum Sepolia failed. Let's make sure your connection parameters are correct.
+        </p>
+        
+        <div class="mt-4 p-3.5 bg-zinc-50 border border-zinc-200/60 rounded-2xl text-[11px] text-zinc-600 text-left leading-normal w-full">
+          <strong class="block mb-1.5 font-semibold text-zinc-900">🔍 Troubleshooting Checklist:</strong>
+          <ul class="space-y-1 list-disc list-inside">
+            <li>Ensure you are connected to <span class="font-semibold text-zinc-900">Ethereum Sepolia Testnet</span>.</li>
+            <li>Confirm your wallet has sufficient <span class="font-semibold text-zinc-900">Sepolia ETH</span> for purchase & gas.</li>
+            <li>Verify you approved the transaction request inside MetaMask.</li>
+          </ul>
+        </div>
+
+        <div class="mt-6 flex flex-col sm:flex-row gap-2 w-full">
+          <button onclick="closeModal('web3ErrorModal')" class="w-full bg-zinc-100 hover:bg-zinc-200 text-zinc-800 font-medium text-xs px-4 py-2.5 rounded-xl transition cursor-pointer order-2 sm:order-1">
+            Dismiss
+          </button>
+          <button id="errorSwitchNetworkBtn" onclick="closeModal('web3ErrorModal'); switchNetwork();" class="w-full bg-zinc-900 hover:bg-zinc-800 text-white font-medium text-xs px-4 py-2.5 rounded-xl transition shadow cursor-pointer flex items-center justify-center gap-1.5 order-1 sm:order-2">
+            <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+            <span>Switch to Sepolia</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+
+    <!-- RELIST / SELL ASSET MODAL -->
+    <div id="relistAssetModal" class="hidden fixed inset-0 bg-zinc-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div class="bg-white rounded-3xl border border-zinc-200/80 w-full max-w-md overflow-hidden shadow-2xl relative flex flex-col">
+        <!-- Header -->
+        <div class="p-6 pb-4 border-b border-zinc-200/60 flex items-center justify-between">
+          <div>
+            <h3 class="text-lg font-bold text-zinc-900 font-serif-luxury">Relist Real World Asset</h3>
+            <p class="text-xs text-zinc-400">Put your owned asset back on the market</p>
+          </div>
+          <button onclick="closeModal('relistAssetModal')" class="bg-zinc-100 hover:bg-zinc-200 text-zinc-600 hover:text-zinc-950 w-7 h-7 rounded-full flex items-center justify-center transition cursor-pointer">
+            <i data-lucide="x" class="w-4 h-4"></i>
+          </button>
+        </div>
+
+        <!-- Form Body -->
+        <form id="relistAssetForm" onsubmit="handleRelistSubmit(event)" class="p-6 space-y-4">
+          <input type="hidden" id="relistAssetId">
+          
+          <!-- Asset Preview Card -->
+          <div class="flex items-center gap-3 p-3.5 bg-zinc-50 border border-zinc-200/60 rounded-2xl">
+            <img id="relistAssetImg" src="" alt="" class="w-14 h-14 object-cover rounded-xl border border-zinc-200 shrink-0">
+            <div class="overflow-hidden">
+              <span id="relistAssetCategory" class="block text-[10px] uppercase font-bold tracking-wider text-zinc-400">HOUSE</span>
+              <h4 id="relistAssetTitle" class="text-sm font-semibold text-zinc-950 truncate font-serif-luxury">The Grand Horizon Villa</h4>
+              <p class="text-[11px] text-zinc-500 truncate">Current Price: <span id="relistAssetCurrentPrice" class="font-semibold text-zinc-700">0.015 ETH</span></p>
+            </div>
+          </div>
+
+          <!-- New Favorite Price input -->
+          <div>
+            <label class="block text-xs font-semibold uppercase tracking-wider text-zinc-400 mb-1.5" for="relistPriceInput">Your Favorite Selling Price (ETH)</label>
+            <div class="relative">
+              <input type="number" step="0.001" min="0.001" id="relistPriceInput" required placeholder="0.02" class="w-full bg-zinc-50 border border-zinc-200/80 rounded-xl pl-3.5 pr-12 py-2.5 text-sm focus:outline-none focus:border-emerald-600 transition font-mono font-medium">
+              <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                <span class="text-xs font-bold text-zinc-400">ETH</span>
+              </div>
+            </div>
+            <p class="text-[10px] text-zinc-400 mt-1.5 leading-relaxed">
+              ⚠️ Putting a custom price and submitting will sign & broadcast a transaction to update the tokenized ledger on Ethereum Sepolia.
+            </p>
+          </div>
+
+          <!-- Action buttons -->
+          <div class="mt-6 flex flex-col sm:flex-row gap-2 w-full">
+            <button type="button" onclick="closeModal('relistAssetModal')" class="w-full bg-zinc-100 hover:bg-zinc-200 text-zinc-800 font-medium text-xs px-4 py-2.5 rounded-xl transition cursor-pointer order-2 sm:order-1">
+              Cancel
+            </button>
+            <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs px-4 py-2.5 rounded-xl transition shadow cursor-pointer flex items-center justify-center gap-1.5 order-1 sm:order-2">
+              <i data-lucide="send" class="w-3.5 h-3.5"></i>
+              <span>List on Marketplace</span>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+
+    <!-- FLOATING TOASTS CONTAINER -->
+    <div id="toastContainer" class="fixed bottom-6 right-6 z-50 flex flex-col gap-2 max-w-sm pointer-events-none">
+      <!-- Toasts dynamically appended here -->
+    </div>
+
+
+    <!-- MAIN JAVASCRIPT LOGIC -->
+    <script>
+      // Assumed smart contract details
+      const CONTRACT_ADDRESS = "0x15CA7442803AC4D3d04Ce304F4Cb65D160903235";
+      const CONTRACT_ABI = [
+        {
+          "inputs": [{ "internalType": "uint256", "name": "assetId", "type": "uint256" }],
+          "name": "buyAsset",
+          "outputs": [],
+          "stateMutability": "payable",
+          "type": "function"
+        }
+      ];
+
+      // Curated stunning Unsplash assets for cover image picker in List Asset form
+      const imagePresets = [
+        {
+          url: "https://images.unsplash.com/photo-1613490493576-7fde63acd811?auto=format&fit=crop&w=800&q=80",
+          label: "Luxury Villa",
+          category: "House"
+        },
+        {
+          url: "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=800&q=80",
+          label: "Modern Penthouse",
+          category: "House"
+        },
+        {
+          url: "https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=800&q=80",
+          label: "Sleek Sportscar",
+          category: "Car"
+        },
+        {
+          url: "https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?auto=format&fit=crop&w=800&q=80",
+          label: "Overland SUV",
+          category: "Car"
+        },
+        {
+          url: "https://images.unsplash.com/photo-1518780664697-55e3ad937233?auto=format&fit=crop&w=800&q=80",
+          label: "Mountain Chalet",
+          category: "House"
+        },
+        {
+          url: "https://images.unsplash.com/photo-1567899378494-47b22a2ae96a?auto=format&fit=crop&w=800&q=80",
+          label: "Superyacht share",
+          category: "Other"
+        }
+      ];
+
+      // Default hardcoded starting assets
+      const defaultAssets = [
+        {
+          id: 1,
+          title: "The Grand Horizon Villa",
+          type: "House",
+          price: "0.015",
+          image: "https://images.unsplash.com/photo-1613490493576-7fde63acd811?auto=format&fit=crop&w=800&q=80",
+          owner: "0x32A46fc7d9382fCe5De1C203649E8284C228E47b",
+          location: "Malibu, California",
+          specs: "4,500 sqft / 5 Bed / Yield: 8.4%",
+          description: "A breathtaking architectural masterpiece nestled cliffside with panoramic Pacific Ocean views. Features solar smart automation, an outdoor infinity pool, private beach access, and premium travertine marble finishes throughout."
+        },
+        {
+          id: 2,
+          title: "Cyber GT Concept-X",
+          type: "Car",
+          price: "0.008",
+          image: "https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=800&q=80",
+          owner: "Velocity Premium Labs",
+          location: "Munich Vault B-4",
+          specs: "Electric / 850 HP / 0-60 in 1.9s",
+          description: "Next-generation carbon-fiber electric hypercar concept. Fully registered real-world high-performance asset with fractional storage insurance, carbon tracking ledger, and tokenized utility membership."
+        },
+        {
+          id: 3,
+          title: "Metropolitan Sky Penthouse",
+          type: "House",
+          price: "0.022",
+          image: "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=800&q=80",
+          owner: "0xF21a228BC228E47b32A46fc7d9382fCe5De1C203",
+          location: "Manhattan, New York",
+          specs: "3,100 sqft / Duplex / Yield: 7.1%",
+          description: "Luxury duplex penthouse overlooking Central Park. Floored with Calacatta marble, 14-foot floor-to-ceiling glass walls, private direct-elevator access, double wine-cellar integration, and dual dynamic outdoor terraces."
+        },
+        {
+          id: 4,
+          title: "Vanguard Overland SUV",
+          type: "Car",
+          price: "0.005",
+          image: "https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?auto=format&fit=crop&w=800&q=80",
+          owner: "0x77c2298ef9ef9ef032d93F642f64180aa3f6ee1a",
+          location: "Aspen Asset Storage",
+          specs: "EV SUV / 4x4 / Off-grid Pack",
+          description: "Rugged heavy-duty electric exploration vehicle. Ready for off-grid adventure with rooftop solar generation, integrated vehicle vehicle-to-home battery backup, extreme cold-temperature chassis heating, and auto-terrain leveling."
+        },
+        {
+          id: 5,
+          title: "Alpine Sanctuary Chalet",
+          type: "House",
+          price: "0.018",
+          image: "https://images.unsplash.com/photo-1518780664697-55e3ad937233?auto=format&fit=crop&w=800&q=80",
+          owner: "Aspen Alpine Trust",
+          location: "Zermatt, Switzerland",
+          specs: "2,800 sqft / ski-in-out / Yield: 9.2%",
+          description: "An ultra-cozy luxury mountain sanctuary built from reclaimed historical larchwood and local granite. Offers prime ski-in/ski-out privileges directly onto the Cervino slopes, private thermal hot springs tub, and wine cellar."
+        },
+        {
+          id: 6,
+          title: "Apex Roadster S",
+          type: "Car",
+          price: "0.012",
+          image: "https://images.unsplash.com/photo-1552519507-da3b142c6e3d?auto=format&fit=crop&w=800&q=80",
+          owner: "0x2B98E12E47b32A46fc7d9382fCe5De1C2036A89CC",
+          location: "London Vault C-1",
+          specs: "V8 Twin-Turbo / 720 HP / Classic Manual",
+          description: "Carbon red track-focused performance roadster with manual gated gearbox, active titanium aerodynamics, and carbon-ceramic braking array. Certified investment-grade limited-production model."
+        },
+        {
+          id: 7,
+          title: "Elysian Estate Vineyards",
+          type: "House",
+          price: "0.045",
+          image: "https://images.unsplash.com/photo-1580587771525-78b9dba3b914?auto=format&fit=crop&w=800&q=80",
+          owner: "0x91FA9382fCe5De1C203649E8284C228E47b32A46",
+          location: "Tuscany, Italy",
+          specs: "8,900 sqft / Vineyard / Yield: 11.5%",
+          description: "Sprawling historical vineyard estate in the heart of Chianti. Includes 15th-century luxury master villa, modern olive oil and wine production facility, storage cells, and high commercial yield contracts for ongoing revenue."
+        },
+        {
+          id: 8,
+          title: "Monaco Azure Yacht Share",
+          type: "Other",
+          price: "0.035",
+          image: "https://images.unsplash.com/photo-1567899378494-47b22a2ae96a?auto=format&fit=crop&w=800&q=80",
+          owner: "Lady Victoria Pembroke",
+          location: "Port Hercule, Monaco",
+          specs: "110ft Custom Cruiser / Yield: 6.8%",
+          description: "Fractional equity share in a pristine bespoke 110ft luxury cruiser. Fully crewed, with professional summer/winter charter booking management yielding predictable off-season revenue directly to token holders."
+        },
+        {
+          id: 9,
+          title: "Kyoto Zen Courtyard House",
+          type: "House",
+          price: "0.016",
+          image: "https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?auto=format&fit=crop&w=800&q=80",
+          owner: "0x88f288BC228E47b32A46fc7d9382fCe5De1C20364",
+          location: "Kyoto, Japan",
+          specs: "3,200 sqft / Zen Garden / Yield: 7.5%",
+          description: "A meticulously restored traditional Machiya townhouse featuring authentic tatami rooms, sliding shoji screens, a serene private rock garden, and a modern custom cedar bath."
+        },
+        {
+          id: 10,
+          title: "Midnight Edition Roadster",
+          type: "Car",
+          price: "0.011",
+          image: "https://images.unsplash.com/photo-1525609004556-c46c7d6cf0a3?auto=format&fit=crop&w=800&q=80",
+          owner: "Elena Rostova",
+          location: "Geneva Vault A-3",
+          specs: "Electric / Stealth Pack / 0-60 in 2.1s",
+          description: "Limited midnight black electric performance coupe. Fully climate-controlled storage, certified battery performance index, and priority rental utility dividends."
+        },
+        {
+          id: 11,
+          title: "Santorini Cliffside Dome",
+          type: "House",
+          price: "0.024",
+          image: "https://images.unsplash.com/photo-1533105079780-92b9be482077?auto=format&fit=crop&w=800&q=80",
+          owner: "0x2A46fc7d9382fCe5De1C203649E8284C228E47b32",
+          location: "Santorini, Greece",
+          specs: "1,800 sqft / Cave Suite / Yield: 10.1%",
+          description: "An iconic white cave suite perched high on the caldera cliffs. Offers breathtaking sunset vistas, private heated cave pool, and outstanding tourist rental occupancy rates."
+        },
+        {
+          id: 12,
+          title: "Vantage Chronograph 1972",
+          type: "Other",
+          price: "0.006",
+          image: "https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?auto=format&fit=crop&w=800&q=80",
+          owner: "Marcus Sterling",
+          location: "Zurich Safe Deposit",
+          specs: "Bespoke Movement / Original Leather",
+          description: "An exceptionally rare, vintage 1972 mechanical racing chronograph. Certified grade A-9 physical condition, preserved in a secure, gas-purged vault, backed by dynamic high-fidelity decentralized deeds."
+        },
+        {
+          id: 13,
+          title: "Prism Art Deco Lofts",
+          type: "House",
+          price: "0.013",
+          image: "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=800&q=80",
+          owner: "0x55E1C203649E8284C228E47b32A46fc7d9382fCe",
+          location: "Miami Beach, Florida",
+          specs: "2,100 sqft / Dual Terraces / Yield: 8.0%",
+          description: "A gorgeous luxury loft situated in a historic renovated Art Deco building. Features bright neon accents, structural polished terrazzo floors, and a private wraparound sunset deck."
+        },
+        {
+          id: 14,
+          title: "Monza Scuderia Hypercar",
+          type: "Car",
+          price: "0.029",
+          image: "https://images.unsplash.com/photo-1542282088-72c9c27ed0cd?auto=format&fit=crop&w=800&q=80",
+          owner: "Sir Reginald Finch",
+          location: "Milan Performance Vault",
+          specs: "Hybrid V12 / 1050 HP / Track Edition",
+          description: "An elite street-legal track hypercar. Carbon-weave safety monocoque, telemetry tracking contract integration, and VIP access to world-class historical racing events."
+        },
+        {
+          id: 15,
+          title: "The Highlands Timber Lodge",
+          type: "House",
+          price: "0.017",
+          image: "https://images.unsplash.com/photo-1542718610-a1d656d1884c?auto=format&fit=crop&w=800&q=80",
+          owner: "0x63ACD81123649E8284C228E47b32A46fc7d9382fC",
+          location: "Glencoe, Scotland",
+          specs: "3,400 sqft / Stone Hearth / Yield: 8.9%",
+          description: "A rustic mountain sanctuary nestled in the Scottish Highlands. Built with local dry-stone and massive old-growth timber, featuring double hearths and a glass star-gazing tower."
+        },
+        {
+          id: 16,
+          title: "Sovereign Gold Reserve Bar",
+          type: "Other",
+          price: "0.003",
+          image: "https://images.unsplash.com/photo-1610375461246-83df859d849d?auto=format&fit=crop&w=800&q=80",
+          owner: "Sovereign Asset Holdings",
+          location: "London Security Vault",
+          specs: "1kg 99.99% Fine Gold / Serial #48291",
+          description: "Direct tokenized fractional deed on a physically audited, pure Swiss-minted 1kg gold bar. Securely stored under 24/7 armed custody with regular proof-of-reserve reports."
+        },
+        {
+          id: 17,
+          title: "Modern Oasis Desert Villa",
+          type: "House",
+          price: "0.021",
+          image: "https://images.unsplash.com/photo-1513584684374-8bab748fbf90?auto=format&fit=crop&w=800&q=80",
+          owner: "0x2B98E12E47b32A46fc7d9382fCe5De1C2036A89CC",
+          location: "Palm Springs, California",
+          specs: "3,800 sqft / Net-Zero Solar / Yield: 9.0%",
+          description: "Stunning minimalist architectural desert escape. Powered entirely by off-grid solar storage, with deep cooling pools, outdoor fire pits, and massive sliding glass walls."
+        },
+        {
+          id: 18,
+          title: "Heritage 1967 Muscle Coupe",
+          type: "Car",
+          price: "0.007",
+          image: "https://images.unsplash.com/photo-1583121274602-3e2820c69888?auto=format&fit=crop&w=800&q=80",
+          owner: "Julian Cross",
+          location: "Austin Vault F-1",
+          specs: "Classic V8 / Rebuilt Transmission",
+          description: "An authentic, numbers-matching 1967 American performance coupe. Meticulously restored with original chrome trim, custom hand-stitched leather interiors, and modern disc brakes."
+        },
+        {
+          id: 19,
+          title: "Prime Vineyard Barrel Reserve",
+          type: "Other",
+          price: "0.004",
+          image: "https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?auto=format&fit=crop&w=800&q=80",
+          owner: "0x89C6A7b15a90F1CC27546C4957e6f8AA46fc7d93",
+          location: "Bordeaux, France",
+          specs: "225L French Oak / 2021 Vintage",
+          description: "Deed representing full ownership of a premium 225-liter barrel of Grand Cru Bordeaux. Professionally cellared, maturing beautifully to reach peak valuation over the next decade."
+        },
+        {
+          id: 20,
+          title: "Tropical Azure Waterfront",
+          type: "House",
+          price: "0.025",
+          image: "https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=800&q=80",
+          owner: "Elena Rostova",
+          location: "Bora Bora, French Polynesia",
+          specs: "1,500 sqft / Overwater / Yield: 11.2%",
+          description: "Stunning overwater bungalow featuring a private lagoon-plunge glass floor. Perfect rental yield with dual docks, coral garden reef views, and personal watercraft access."
+        },
+        {
+          id: 21,
+          title: "Veloce Carbon e-Bike",
+          type: "Car",
+          price: "0.002",
+          image: "https://images.unsplash.com/photo-1485965120184-e220f721d03e?auto=format&fit=crop&w=800&q=80",
+          owner: "0x77c2298ef9ef9ef032d93F642f64180aa3f6ee1a",
+          location: "Amsterdam Logistic Depot",
+          specs: "Carbon Monocoque / 500W motor",
+          description: "Ultra-premium, limited-production carbon fiber smart electric bike. Smart navigation integration, theft-recovery GPS ledger tracking, and instant urban deployment."
+        },
+        {
+          id: 22,
+          title: "Fossilized Triceratops Brow",
+          type: "Other",
+          price: "0.014",
+          image: "https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?auto=format&fit=crop&w=800&q=80",
+          owner: "Curator Arthur Sterling",
+          location: "Chicago Private Vault",
+          specs: "Late Cretaceous / Verified Authentic",
+          description: "An authentic, beautifully preserved fossilized horn and partial brow structure of a Late Cretaceous Triceratops. Curated by top archeologists and certified via carbon signature."
+        },
+        {
+          id: 23,
+          title: "Scandinavian Modern Cabin",
+          type: "House",
+          price: "0.015",
+          image: "https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?auto=format&fit=crop&w=800&q=80",
+          owner: "0x32A46fc7d9382fCe5De1C203649E8284C228E47b",
+          location: "Lofoten Islands, Norway",
+          specs: "1,900 sqft / Aurora Glazing / Yield: 8.7%",
+          description: "Stunning remote cabin designed specifically for viewing the Northern Lights. Triple-glazed panoramic roof, local birch interior, and advanced geothermal underfloor heat."
+        },
+        {
+          id: 24,
+          title: "Tarmac Spec Drift Racer",
+          type: "Car",
+          price: "0.009",
+          image: "https://images.unsplash.com/photo-1568605114967-8130f3a36994?auto=format&fit=crop&w=800&q=80",
+          owner: "Velocity Premium Labs",
+          location: "Tokyo Storage Vault",
+          specs: "Twin-Scroll Turbo / Sequential Box",
+          description: "Bespoke track-only performance car tuned for precise high-speed drifting. Includes a full set of custom magnesium wheels and fully recorded performance telemetry ledger."
+        },
+        {
+          id: 25,
+          title: "Bespoke Emerald Cut Diamond",
+          type: "Other",
+          price: "0.019",
+          image: "https://images.unsplash.com/photo-1605100804763-247f67b3557e?auto=format&fit=crop&w=800&q=80",
+          owner: "0xF21a228BC228E47b32A46fc7d9382fCe5De1C203",
+          location: "Antwerp Vault D-2",
+          specs: "4.8 Carat / VVS1 Clarity / D Color",
+          description: "An exceptional, investment-grade emerald-cut natural diamond. Backed by GIA certification and recorded under a smart-title protocol guaranteeing full chain of custody."
+        },
+        {
+          id: 26,
+          title: "Historic Tuscan Olive Mill",
+          type: "House",
+          price: "0.019",
+          image: "https://images.unsplash.com/photo-1505691938895-1758d7feb511?auto=format&fit=crop&w=800&q=80",
+          owner: "Aurelia Sterling",
+          location: "Siena, Italy",
+          specs: "4,200 sqft / Olive Grove / Yield: 9.5%",
+          description: "A gorgeous, carefully updated medieval olive press mill with deep brick archways, terracotta detailing, and 120 historic yielding olive trees producing organic cold-press oils."
+        },
+        {
+          id: 27,
+          title: "Classic 1974 Luxury Cruiser",
+          type: "Car",
+          price: "0.006",
+          image: "https://images.unsplash.com/photo-1511919884226-fd3cad34687c?auto=format&fit=crop&w=800&q=80",
+          owner: "0xAA49E1a228BC228E47b32A46fc7d9382fCe5De1C",
+          location: "Paris Private Depot",
+          specs: "V8 Classic / Velvet Seats",
+          description: "An incredibly elegant vintage European luxury sedan. Original factory lacquer finish, fully restored wooden dashboard console, and pristine suspension dynamics."
+        },
+        {
+          id: 28,
+          title: "Royal Persian Tapestry",
+          type: "Other",
+          price: "0.012",
+          image: "https://images.unsplash.com/photo-1579783902614-a3fb3927b6a5?auto=format&fit=crop&w=800&q=80",
+          owner: "Sovereign Asset Holdings",
+          location: "Geneva Free-Port",
+          specs: "Silk & Gold Thread / 18th Century",
+          description: "An authentic, museum-grade 18th-century royal court tapestry hand-woven with high-density premium silk threads and authentic fine-spun gold leaf borders."
+        },
+        {
+          id: 29,
+          title: "Skyline Oasis Penthouse",
+          type: "House",
+          price: "0.023",
+          image: "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=800&q=80",
+          owner: "0x49ECC228E47b32A46fc7d9382fCe5De1C2036A789",
+          location: "Singapore CBD",
+          specs: "2,900 sqft / Garden Balcony / Yield: 7.9%",
+          description: "Modern smart-home duplex penthouse boasting suspended sky gardens, a private rooftop lap pool, automated energy arrays, and incredible panoramic harbor views."
+        },
+        {
+          id: 30,
+          title: "Offroad Rally Challenger",
+          type: "Car",
+          price: "0.008",
+          image: "https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?auto=format&fit=crop&w=800&q=80",
+          owner: "Elena Rostova",
+          location: "Dubai Custom Vault",
+          specs: "Long-Travel Shocks / 650 HP",
+          description: "Custom built Dakar-spec offroad rally racing vehicle. Heavy-duty tube frame, twin-turbo V6 engine, state-of-the-art telemetry logging, and all-terrain active suspension."
+        },
+        {
+          id: 31,
+          title: "Rare Cask 30yr Single Malt",
+          type: "Other",
+          price: "0.005",
+          image: "https://images.unsplash.com/photo-1527061011665-3652c757a4d4?auto=format&fit=crop&w=800&q=80",
+          owner: "0x77c2298ef9ef9ef032d93F642f64180aa3f6ee1a",
+          location: "Islay Cask Storage",
+          specs: "Ex-Sherry Butt / 140 Bottles Left",
+          description: "An exclusive fractional stake in a premium maturing barrel of heavily peated Islay single malt Scotch whiskey. Certified annually by master distillers."
+        },
+        {
+          id: 32,
+          title: "Cote d'Azur Cliffside Mansion",
+          type: "House",
+          price: "0.048",
+          image: "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=800&q=80",
+          owner: "Lord Harrington",
+          location: "Nice, France",
+          specs: "6,800 sqft / Yacht Mooring / Yield: 9.8%",
+          description: "A spectacular French Riviera estate offering unrivaled Mediterranean panoramas, beautifully landscaped gardens, a private funicular down to the beach, and a heliport."
+        },
+        {
+          id: 33,
+          title: "Stealth Black Track Edition",
+          type: "Car",
+          price: "0.015",
+          image: "https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=800&q=80",
+          owner: "0x2B98E12E47b32A46fc7d9382fCe5De1C2036A89CC",
+          location: "Nürburg, Germany",
+          specs: "V10 Engine / Active Aero / Carbon Brakes",
+          description: "Extremely rare carbon track-tuned coupe finished in matte stealth black. Features double double-wishbone carbon suspension and interactive telemetry engine tracker."
+        },
+        {
+          id: 34,
+          title: "Masterpiece Oil Painting 1894",
+          type: "Other",
+          price: "0.022",
+          image: "https://images.unsplash.com/photo-1579783900882-c0d3dad7b119?auto=format&fit=crop&w=800&q=80",
+          owner: "Sovereign Asset Holdings",
+          location: "Geneva Vault C-3",
+          specs: "Impressionist Oil / Original Frame",
+          description: "Deed representing full title of a certified, museum-registered 1894 oil painting. Kept in optimal climate-controlled conditions with comprehensive insurance."
+        },
+        {
+          id: 35,
+          title: "Malibu Cove Surf Villa",
+          type: "House",
+          price: "0.018",
+          image: "https://images.unsplash.com/photo-1513584684374-8bab748fbf90?auto=format&fit=crop&w=800&q=80",
+          owner: "0xF21a228BC228E47b32A46fc7d9382fCe5De1C203",
+          location: "Malibu, California",
+          specs: "2,500 sqft / Beachfront / Yield: 9.4%",
+          description: "Stunning modern beach bungalow overlooking a secluded surf break. Offers immediate ocean access, custom outdoor showers, solar smart grid, and hot tub."
+        },
+        {
+          id: 36,
+          title: "Classic Silver Convertible",
+          type: "Car",
+          price: "0.007",
+          image: "https://images.unsplash.com/photo-1552519507-da3b142c6e3d?auto=format&fit=crop&w=800&q=80",
+          owner: "Marcus Sterling",
+          location: "Rome Historic Vault",
+          specs: "Inline 6 Classic / Wire Wheels",
+          description: "Fully documented and beautifully restored classic European roadster convertible with high-chrome spoke wheels, beige mohair top, and original leather dashboard."
+        },
+        {
+          id: 37,
+          title: "Historic Stradivarius Violin",
+          type: "Other",
+          price: "0.038",
+          image: "https://images.unsplash.com/photo-1465847899084-d164df4dedc6?auto=format&fit=crop&w=800&q=80",
+          owner: "0x32A46fc7d9382fCe5De1C203649E8284C228E47b",
+          location: "Cremona Bank Safe",
+          specs: "Spruce & Maple / Certified 1712",
+          description: "An authentic Stradivarius violin hand-crafted during his famous golden era. Unmatched tonal properties, fully certified, and under tight climate-controlled custody."
+        },
+        {
+          id: 38,
+          title: "The Glass House Oasis",
+          type: "House",
+          price: "0.020",
+          image: "https://images.unsplash.com/photo-1580587771525-78b9dba3b914?auto=format&fit=crop&w=800&q=80",
+          owner: "Elena Rostova",
+          location: "New Canaan, Connecticut",
+          specs: "2,700 sqft / Steel Frame / Yield: 8.2%",
+          description: "Stunning modernist glass-envelope architectural forest villa. Flooded with natural light, featuring custom concrete structural columns, minimalist interiors, and geothermal heating."
+        },
+        {
+          id: 39,
+          title: "GT3 Track Specialist",
+          type: "Car",
+          price: "0.012",
+          image: "https://images.unsplash.com/photo-1542282088-72c9c27ed0cd?auto=format&fit=crop&w=800&q=80",
+          owner: "0x89C6A7b15a90F1CC27546C4957e6f8AA46fc7d93",
+          location: "Stuttgart Storage Vault",
+          specs: "Flat 6 Engine / GT3 Spec / 510 HP",
+          description: "Pragmatic, race-ready extreme-performance coupe with sequential manual shifting, carbon safety seats, titanium fire protection, and active telemetry logs."
+        },
+        {
+          id: 40,
+          title: "Rare 18ct Imperial Jadeite",
+          type: "Other",
+          price: "0.025",
+          image: "https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?auto=format&fit=crop&w=800&q=80",
+          owner: "Sovereign Asset Holdings",
+          location: "Hong Kong Security Vault",
+          specs: "18.4 Carat / Grade A Untreated",
+          description: "Exquisite, museum-quality glowing green untreated imperial jadeite gem. Certified authentic by SSEF laboratory with secure digital ownership tracking."
+        },
+        {
+          id: 41,
+          title: "Tulum Beach Eco-Resort",
+          type: "House",
+          price: "0.016",
+          image: "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=800&q=80",
+          owner: "0xF21a228BC228E47b32A46fc7d9382fCe5De1C203",
+          location: "Tulum, Mexico",
+          specs: "2,300 sqft / Net-Zero / Yield: 11.8%",
+          description: "A gorgeous luxury villa constructed from sustainable local Tzalam hardwood. Includes solar microgrid, private freshwater cenote pool, and private palm grove."
+        },
+        {
+          id: 42,
+          title: "Retro 1969 Electric Cruiser",
+          type: "Car",
+          price: "0.009",
+          image: "https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=800&q=80",
+          owner: "Marcus Sterling",
+          location: "Silicon Valley Depot",
+          specs: "EV Restomod / 400 mi Range",
+          description: "Gorgeous vintage 1969 body converted to a powerful modern electric drivetrain. Blends historical styling with cutting-edge clean battery efficiency."
+        },
+        {
+          id: 43,
+          title: "Meteorite Lunar Sliced Specimen",
+          type: "Other",
+          price: "0.004",
+          image: "https://images.unsplash.com/photo-1518156677180-95a2893f3e9f?auto=format&fit=crop&w=800&q=80",
+          owner: "0xAA49E1a228BC228E47b32A46fc7d9382fCe5De1C",
+          location: "Vienna Science Vault",
+          specs: "142g Authentic Moon Rock Slice",
+          description: "A beautifully polished thin-slice specimen of authentic lunar basaltic breccia meteorite, recovered from the Sahara. Certified and sealed with physical tag."
+        },
+        {
+          id: 44,
+          title: "Sloane Square Townhouse",
+          type: "House",
+          price: "0.035",
+          image: "https://images.unsplash.com/photo-1580587771525-78b9dba3b914?auto=format&fit=crop&w=800&q=80",
+          owner: "Lady Victoria Pembroke",
+          location: "London, United Kingdom",
+          specs: "4,100 sqft / Georgian / Yield: 6.9%",
+          description: "A pristine red-brick historical Georgian townhouse in Chelsea. Traditional oak-paneled drawing rooms, high ceilings, modernized kitchen, and a lovely south-facing garden."
+        },
+        {
+          id: 45,
+          title: "V12 Racing Carbon Prototype",
+          type: "Car",
+          price: "0.028",
+          image: "https://images.unsplash.com/photo-1568605114967-8130f3a36994?auto=format&fit=crop&w=800&q=80",
+          owner: "Velocity Premium Labs",
+          location: "Bologna Performance Center",
+          specs: "V12 Hybrid / Monocoque Chassis",
+          description: "Bespoke, track-focused high-performance sports car prototype. Advanced underbody venturi aerodynamics, telemetry logging, and direct factory racing maintenance contract."
+        },
+        {
+          id: 46,
+          title: "Space Exploration Flight Ticket",
+          type: "Other",
+          price: "0.020",
+          image: "https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=800&q=80",
+          owner: "0x77c2298ef9ef9ef032d93F642f64180aa3f6ee1a",
+          location: "Orbital Launch Depot",
+          specs: "Suborbital Flight Seat / Priority #12",
+          description: "Deed representing a fully paid, priority-secured suborbital flight reservation on a leading commercial aerospace capsule. Fully transferable."
+        },
+        {
+          id: 47,
+          title: "The Lakeside Timber Chalet",
+          type: "House",
+          price: "0.016",
+          image: "https://images.unsplash.com/photo-1505691938895-1758d7feb511?auto=format&fit=crop&w=800&q=80",
+          owner: "Julian Cross",
+          location: "Lake Tahoe, Nevada",
+          specs: "2,600 sqft / Private Dock / Yield: 9.1%",
+          description: "A lovely timber lake house featuring expansive panoramic lakeside decks, private deepwater boat slip, stone fireplaces, and vaulted cedarwood ceiling."
+        },
+        {
+          id: 48,
+          title: "Midnight Track Hypercar",
+          type: "Car",
+          price: "0.018",
+          image: "https://images.unsplash.com/photo-1542282088-72c9c27ed0cd?auto=format&fit=crop&w=800&q=80",
+          owner: "0x2B98E12E47b32A46fc7d9382fCe5De1C2036A89CC",
+          location: "Monza Track Vault",
+          specs: "W16 Quad-Turbo / 1600 HP",
+          description: "Next-generation hypercar built strictly for record-breaking speed. Full custom carbon monocoque, magnesium wheels, and titanium exhaust array."
+        },
+        {
+          id: 49,
+          title: "Bespoke Custom Superyacht Share",
+          type: "Other",
+          price: "0.032",
+          image: "https://images.unsplash.com/photo-1567899378494-47b22a2ae96a?auto=format&fit=crop&w=800&q=80",
+          owner: "0xAA49E1a228BC228E47b32A46fc7d9382fCe5De1C",
+          location: "Port Hercule, Monaco",
+          specs: "135ft Custom Cruiser / Yield: 7.2%",
+          description: "Fractional 1/10th ownership share in an exquisite, newly launched 135ft luxury superyacht. Fully staffed and professionally managed with charter returns."
+        },
+        {
+          id: 50,
+          title: "The Eco Bamboo Retreat",
+          type: "House",
+          price: "0.014",
+          image: "https://images.unsplash.com/photo-1513584684374-8bab748fbf90?auto=format&fit=crop&w=800&q=80",
+          owner: "0x89C6A7b15a90F1CC27546C4957e6f8AA46fc7d93",
+          location: "Ubud, Bali",
+          specs: "2,100 sqft / Natural River / Yield: 11.0%",
+          description: "An architectural bamboo luxury villa overlooking a rushing river canyon. Off-grid solar water treatment, natural stone infinity plunge pool, and lush vegetation."
+        },
+        {
+          id: 51,
+          title: "Sleek Carbon EV Roadster",
+          type: "Car",
+          price: "0.011",
+          image: "https://images.unsplash.com/photo-1525609004556-c46c7d6cf0a3?auto=format&fit=crop&w=800&q=80",
+          owner: "0xF21a228BC228E47b32A46fc7d9382fCe5De1C203",
+          location: "San Jose Custom Vault",
+          specs: "EV Roadster / 0-60 in 2.0s / Glass Roof",
+          description: "Extremely modern, dual-motor carbon fiber EV roadster featuring autonomous driving arrays, glass panoramic cockpit, and lightweight active magnesium suspension."
+        },
+        {
+          id: 52,
+          title: "Gold Bullion Vault Allocation",
+          type: "Other",
+          price: "0.005",
+          image: "https://images.unsplash.com/photo-1610375461246-83df859d849d?auto=format&fit=crop&w=800&q=80",
+          owner: "Sovereign Asset Holdings",
+          location: "Zurich Swiss Vault",
+          specs: "2kg Physically Audited Bullion",
+          description: "A premium physical allocation of high-grade Swiss 2kg gold bullion bar securely cellared in the Swiss Alps with insurance and audit report ledger."
+        },
+        {
+          id: 53,
+          title: "The Horizon Cliffside Manor",
+          type: "House",
+          price: "0.042",
+          image: "https://images.unsplash.com/photo-1613490493576-7fde63acd811?auto=format&fit=crop&w=800&q=80",
+          owner: "Lord Harrington",
+          location: "Cabo San Lucas, Mexico",
+          specs: "5,400 sqft / Infinity Pool / Yield: 10.5%",
+          description: "A spectacular modern hacienda cliffside villa with gorgeous ocean breezes, massive open terraces, infinity-edge swimming pool, and private dynamic sandy beach access."
+        },
+        {
+          id: 54,
+          title: "Vantage V8 Concept Coupe",
+          type: "Car",
+          price: "0.009",
+          image: "https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=800&q=80",
+          owner: "Elena Rostova",
+          location: "London Storage Vault",
+          specs: "V8 Twin-Scroll / Matte Gold Wrap",
+          description: "Bespoke custom wrapped V8 performance coupe with high-performance carbon-ceramic braking, limited active slip differential, and leather track bucket seats."
+        },
+        {
+          id: 55,
+          title: "Maturing French Oak Wine Barrel",
+          type: "Other",
+          price: "0.006",
+          image: "https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?auto=format&fit=crop&w=800&q=80",
+          owner: "Aurelia Sterling",
+          location: "Burgundy, France",
+          specs: "228L Oak / Grand Cru Vintage 2022",
+          description: "A pristine maturing French oak barrel of premium Burgundy Pinot Noir. Professionally monitored, maturing under constant cellaring temperature."
+        },
+        {
+          id: 56,
+          title: "The Starfire Luxury Penthouse",
+          type: "House",
+          price: "0.026",
+          image: "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=800&q=80",
+          owner: "0x49ECC228E47b32A46fc7d9382fCe5De1C2036A789",
+          location: "Los Angeles, California",
+          specs: "3,500 sqft / Rooftop Pad / Yield: 8.5%",
+          description: "Elegant smart high-rise penthouse situated high above DTLA. Features an expansive open floor plan, floor-to-ceiling automated glass walls, and skyline infinity spa."
+        },
+        {
+          id: 57,
+          title: "Apex Carbon Hypercar Edition",
+          type: "Car",
+          price: "0.024",
+          image: "https://images.unsplash.com/photo-1542282088-72c9c27ed0cd?auto=format&fit=crop&w=800&q=80",
+          owner: "Velocity Premium Labs",
+          location: "Dubai Marina Vault",
+          specs: "Hybrid W16 / 1200 HP",
+          description: "Bespoke customized track-specialist racing vehicle featuring hyper-light weight active carbon-fiber aerodynamic fins and high-frequency telemetry system."
+        },
+        {
+          id: 58,
+          title: "Certified 18ct Blue Sapphire",
+          type: "Other",
+          price: "0.015",
+          image: "https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?auto=format&fit=crop&w=800&q=80",
+          owner: "0xAA49E1a228BC228E47b32A46fc7d9382fCe5De1C",
+          location: "Zurich Swiss Vault",
+          specs: "8.2 Carat / Ceylon Deep Blue / VVS2",
+          description: "Stunning untreated Royal Ceylon deep blue oval-cut sapphire. Backed by dual GRS and GIA lab certifications and stored securely under vault protection."
+        },
+        {
+          id: 59,
+          title: "The Coastal Eco Oasis",
+          type: "House",
+          price: "0.018",
+          image: "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=800&q=80",
+          owner: "Julian Cross",
+          location: "Maui, Hawaii",
+          specs: "2,400 sqft / Solar Pack / Yield: 9.8%",
+          description: "Minimalist tropical retreat using local Koa wood and natural basalt rock. Built off-grid with full water purification, dynamic power banks, and coconut grove."
+        },
+        {
+          id: 60,
+          title: "Urban GT Performance Coupe",
+          type: "Car",
+          price: "0.009",
+          image: "https://images.unsplash.com/photo-1552519507-da3b142c6e3d?auto=format&fit=crop&w=800&q=80",
+          owner: "0x77c2298ef9ef9ef032d93F642f64180aa3f6ee1a",
+          location: "Geneva Vault C-4",
+          specs: "Twin-Turbo Inline 6 / 480 HP",
+          description: "Custom metallic slate performance grand tourer. Adaptive high-frequency electronic dampers, dynamic variable steering rack, and high-fidelity smart-key tracking."
+        }
+      ];
+
+      // App Global State
+      const state = {
+        walletConnected: false,
+        userAddress: "",
+        userUsername: "",
+        networkCorrect: false,
+        currentNetworkName: "Disconnected",
+        currentBalance: "0.00",
+        sandboxMode: false, // Fully disabled as requested
+        isPendingTx: false,
+        activeFilter: "all",
+        selectedPresetUrl: ""
+      };
+
+      // Assets list stored in memory, loaded from localStorage if available
+      let assets = [];
+
+      // Load assets from localStorage or fallback to defaults
+      function loadAssets() {
+        const stored = localStorage.getItem("rialo_marketplace_assets");
+        if (stored) {
+          try {
+            assets = JSON.parse(stored);
+          } catch(e) {
+            assets = [...defaultAssets];
+          }
+        } else {
+          assets = [...defaultAssets];
+        }
+      }
+
+      // Save current assets array
+      function saveAssets() {
+        localStorage.setItem("rialo_marketplace_assets", JSON.stringify(assets));
+        updateMetrics();
+      }
+
+      // Profile Username Load and Complete Identity Engine
+      function loadUserProfile() {
+        // Core profile model structure
+        const defaultProfile = {
+          joined: false,
+          photo: "",
+          name: "",
+          bio: "",
+          socials: {
+            x: { value: "", public: true },
+            discord: { value: "", public: true },
+            github: { value: "", public: true },
+            instagram: { value: "", public: true },
+            linkedin: { value: "", public: true }
+          },
+          privacy: {
+            bio: true
+          }
+        };
+
+        const stored = localStorage.getItem("rialo_user_profile");
+        if (stored) {
+          try {
+            state.userProfile = JSON.parse(stored);
+            // Ensure schema integrity for older profiles
+            if (!state.userProfile.socials) state.userProfile.socials = defaultProfile.socials;
+            if (!state.userProfile.privacy) state.userProfile.privacy = defaultProfile.privacy;
+          } catch(e) {
+            state.userProfile = { ...defaultProfile };
+          }
+        } else {
+          // Legacy backward compatibility check
+          const legacyUsername = localStorage.getItem("rialo_username");
+          state.userProfile = { ...defaultProfile };
+          if (legacyUsername) {
+            state.userProfile.name = legacyUsername;
+            state.userProfile.joined = true;
+          }
+        }
+
+        // Retrieve persisted address if joined
+        const storedAddress = localStorage.getItem("rialo_user_address");
+        if (storedAddress) {
+          state.userAddress = storedAddress;
+          state.walletConnected = true;
+        }
+
+        // Apply onboarding blocker based on joined status
+        const overlay = document.getElementById("onboardingOverlay");
+        if (state.userProfile.joined) {
+          overlay.classList.add("hidden");
+          overlay.classList.remove("flex");
+          document.body.style.overflow = "";
+        } else {
+          overlay.classList.remove("hidden");
+          overlay.classList.add("flex");
+          document.body.style.overflow = "hidden"; // disable background scrolling until joined
+          
+          // Pre-populate simulated or connected wallet address on onboarding overlay
+          updateOnboardingWalletDisplay();
+        }
+      }
+
+      function saveUserProfile() {
+        localStorage.setItem("rialo_user_profile", JSON.stringify(state.userProfile));
+        if (state.userAddress) {
+          localStorage.setItem("rialo_user_address", state.userAddress);
+        }
+        // Keep legacy key synced
+        if (state.userProfile.name) {
+          localStorage.setItem("rialo_username", state.userProfile.name);
+          state.userUsername = state.userProfile.name;
+        }
+        
+        // Hide onboarding overlay if joined
+        const overlay = document.getElementById("onboardingOverlay");
+        if (state.userProfile.joined) {
+          overlay.classList.add("hidden");
+          overlay.classList.remove("flex");
+          document.body.style.overflow = "";
+        }
+        
+        renderIdentityBadge();
+        renderAssets();
+        updateMetrics();
+      }
+
+      // Sync onboarding screen with current wallet details
+      function updateOnboardingWalletDisplay() {
+        const text = document.getElementById("onboardingWalletAddress");
+        const btn = document.getElementById("onboardingConnectBtn");
+        
+        if (state.walletConnected) {
+          text.innerText = state.userAddress;
+          text.className = "block font-mono text-xs text-emerald-600 mt-0.5 truncate select-all font-semibold";
+          if (btn) btn.classList.add("hidden");
+        } else {
+          text.innerText = "Not Connected (Web3 Wallet Required)";
+          text.className = "block font-mono text-zinc-400 mt-0.5 truncate select-all";
+          if (btn) btn.classList.remove("hidden");
+        }
+      }
+
+      // Drag and drop photo upload routines
+      function initDragAndDrop() {
+        // 1. Onboarding drop zone
+        const onboardingDropZone = document.getElementById("photoDropZone");
+        const onboardingFileInput = document.getElementById("photoFileInput");
+
+        if (onboardingDropZone && onboardingFileInput) {
+          // Prevent label click action if a button (like "Remove photo") was clicked
+          onboardingDropZone.addEventListener("click", (e) => {
+            if (e.target.closest("button")) {
+              e.preventDefault();
+            }
+          });
+
+          // Prevent click bubbling recursion loop
+          onboardingFileInput.addEventListener("click", (e) => {
+            e.stopPropagation();
+          });
+
+          // Highlight events
+          ["dragenter", "dragover"].forEach(eventName => {
+            onboardingDropZone.addEventListener(eventName, (e) => {
+              e.preventDefault();
+              onboardingDropZone.classList.add("border-zinc-900", "bg-zinc-100");
+            }, false);
+          });
+
+          ["dragleave", "drop"].forEach(eventName => {
+            onboardingDropZone.addEventListener(eventName, (e) => {
+              e.preventDefault();
+              onboardingDropZone.classList.remove("border-zinc-900", "bg-zinc-100");
+            }, false);
+          });
+
+          onboardingDropZone.addEventListener("drop", (e) => {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            if (files && files[0]) {
+              processProfilePhoto(files[0], "onboarding");
+            }
+          });
+
+          onboardingFileInput.addEventListener("change", (e) => {
+            if (e.target.files && e.target.files[0]) {
+              processProfilePhoto(e.target.files[0], "onboarding");
+              e.target.value = ""; // Reset value to allow selecting the same file again
+            }
+          });
+        }
+
+        // 2. Profile edit drop zone
+        const editDropZone = document.getElementById("editPhotoDropZone");
+        const editFileInput = document.getElementById("editPhotoFileInput");
+
+        if (editDropZone && editFileInput) {
+          // Prevent label click action if a button was clicked inside
+          editDropZone.addEventListener("click", (e) => {
+            if (e.target.closest("button")) {
+              e.preventDefault();
+            }
+          });
+
+          // Prevent click bubbling recursion loop
+          editFileInput.addEventListener("click", (e) => {
+            e.stopPropagation();
+          });
+
+          ["dragenter", "dragover"].forEach(eventName => {
+            editDropZone.addEventListener(eventName, (e) => {
+              e.preventDefault();
+              editDropZone.classList.add("border-zinc-900", "bg-zinc-100");
+            }, false);
+          });
+
+          ["dragleave", "drop"].forEach(eventName => {
+            editDropZone.addEventListener(eventName, (e) => {
+              e.preventDefault();
+              editDropZone.classList.remove("border-zinc-900", "bg-zinc-100");
+            }, false);
+          });
+
+          editDropZone.addEventListener("drop", (e) => {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            if (files && files[0]) {
+              processProfilePhoto(files[0], "edit");
+            }
+          });
+
+          editFileInput.addEventListener("change", (e) => {
+            if (e.target.files && e.target.files[0]) {
+              processProfilePhoto(e.target.files[0], "edit");
+              e.target.value = ""; // Reset value to allow selecting the same file again
+            }
+          });
+        }
+      }
+
+      function processProfilePhoto(file, mode) {
+        if (!file.type.startsWith("image/")) {
+          showToast("Invalid file type. Please upload an image file.", "error");
+          return;
+        }
+        if (file.size > 2 * 1024 * 1024) {
+          showToast("File is too large. Maximum size allowed is 2MB.", "error");
+          return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          const base64Data = e.target.result;
+          if (mode === "onboarding") {
+            state.userProfile.photo = base64Data;
+            document.getElementById("onboardingPhotoPreview").src = base64Data;
+            document.getElementById("photoUploadPlaceholder").classList.add("hidden");
+            document.getElementById("photoUploadPreviewContainer").classList.remove("hidden");
+          } else {
+            state.userProfile.photo = base64Data;
+            document.getElementById("editProfilePhotoPreview").src = base64Data;
+          }
+        };
+        reader.readAsDataURL(file);
+      }
+
+      function resetOnboardingPhoto(event) {
+        if (event) {
+          event.stopPropagation();
+          event.preventDefault();
+        }
+        state.userProfile.photo = "";
+        document.getElementById("photoFileInput").value = "";
+        document.getElementById("photoUploadPlaceholder").classList.remove("hidden");
+        document.getElementById("photoUploadPreviewContainer").classList.add("hidden");
+      }
+
+      // Privacy toggling handler
+      function toggleSocialPrivacy(field) {
+        if (field === 'bio') {
+          const isPub = state.userProfile.privacy.bio !== false;
+          state.userProfile.privacy.bio = !isPub;
+          updatePrivacyButtonVisuals("privacyBtnBio", "privacyBtnBioText", !isPub);
+        } else {
+          const isPub = (state.userProfile.socials[field] && state.userProfile.socials[field].public !== false);
+          if (!state.userProfile.socials[field]) {
+            state.userProfile.socials[field] = { value: "", public: true };
+          }
+          state.userProfile.socials[field].public = !isPub;
+          updatePrivacyButtonVisuals(`privacyBtn${capitalize(field)}`, null, !isPub);
+        }
+        showToast(`Privacy updated: ${field.toUpperCase()} is now ${isPublicLabel(field)}`, "info");
+      }
+
+      function toggleEditSocialPrivacy(field) {
+        if (field === 'bio') {
+          const isPub = state.userProfile.privacy.bio !== false;
+          state.userProfile.privacy.bio = !isPub;
+          updatePrivacyButtonVisuals("privacyBtnEditBio", "privacyBtnEditBioText", !isPub);
+        } else {
+          const isPub = (state.userProfile.socials[field] && state.userProfile.socials[field].public !== false);
+          if (!state.userProfile.socials[field]) {
+            state.userProfile.socials[field] = { value: "", public: true };
+          }
+          state.userProfile.socials[field].public = !isPub;
+          updatePrivacyButtonVisuals(`editPrivacyBtn${capitalize(field)}`, null, !isPub);
+        }
+        showToast(`Privacy updated: ${field.toUpperCase()} is now ${isPublicLabel(field)}`, "info");
+      }
+
+      function isPublicLabel(field) {
+        if (field === 'bio') {
+          return (state.userProfile.privacy.bio !== false) ? "Public" : "Private";
+        }
+        return (state.userProfile.socials[field] && state.userProfile.socials[field].public !== false) ? "Public" : "Private";
+      }
+
+      function capitalize(str) {
+        return str.charAt(0).toUpperCase() + str.slice(1);
+      }
+
+      function updatePrivacyButtonVisuals(btnId, textId, isPublic) {
+        const btn = document.getElementById(btnId);
+        if (!btn) return;
+
+        const iconName = isPublic ? "eye" : "eye-off";
+        const labelText = isPublic ? "Public" : "Private";
+
+        const isBio = btnId.toLowerCase().includes("bio");
+
+        if (isBio) {
+          if (isPublic) {
+            btn.className = "text-[10px] font-medium transition cursor-pointer flex items-center gap-1 text-emerald-600 hover:underline";
+          } else {
+            btn.className = "text-[10px] font-medium transition cursor-pointer flex items-center gap-1 text-zinc-500 hover:underline";
+          }
+        } else {
+          if (isPublic) {
+            btn.className = "shrink-0 px-3 py-2 rounded-xl border text-[11px] font-medium transition cursor-pointer flex items-center gap-1.5 min-w-[85px] justify-center bg-emerald-50 border-emerald-200 text-emerald-700";
+          } else {
+            btn.className = "shrink-0 px-3 py-2 rounded-xl border text-[11px] font-medium transition cursor-pointer flex items-center gap-1.5 min-w-[85px] justify-center bg-zinc-100 border-zinc-200 text-zinc-500";
+          }
+        }
+
+        const spanIdAttr = textId ? `id="${textId}"` : "";
+        const iconSizeClass = isBio ? "w-3 h-3" : "w-3.5 h-3.5";
+        
+        btn.innerHTML = `<i data-lucide="${iconName}" class="${iconSizeClass}"></i> <span ${spanIdAttr}>${labelText}</span>`;
+
+        lucide.createIcons();
+      }
+
+      // Handle Onboarding form submit
+      async function handleOnboardingSubmit(event) {
+        event.preventDefault();
+
+        const name = document.getElementById("onboardingNameInput").value.trim();
+        const bio = document.getElementById("onboardingBioInput").value.trim();
+
+        if (!name) {
+          showToast("Name is a mandatory credential.", "error");
+          return;
+        }
+
+        if (!state.userProfile.photo) {
+          // Provide an exquisite premium default abstract art avatar
+          state.userProfile.photo = "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=150&q=80";
+        }
+
+        // Wallet connection is optional for guest browsing
+        if (!state.walletConnected) {
+          showToast("Welcome! You have joined as a Guest Collector. Connect your wallet anytime to acquire RWAs.", "info");
+        }
+
+        // Update properties
+        state.userProfile.name = name;
+        state.userProfile.bio = bio;
+        state.userProfile.joined = true;
+
+        // Parse socials
+        const fields = ['x', 'discord', 'github', 'instagram', 'linkedin'];
+        fields.forEach(f => {
+          const element = document.getElementById(`social${capitalize(f)}`);
+          if (element) {
+            if (!state.userProfile.socials[f]) {
+              state.userProfile.socials[f] = { value: "", public: true };
+            }
+            state.userProfile.socials[f].value = element.value.trim();
+          }
+        });
+
+        saveUserProfile();
+        if (state.walletConnected) {
+          showToast("RWA Identity verified! Welcome to Rialto Premium Marketplace.", "success");
+        }
+      }
+
+      // Web3 wallet listeners
+      function setupWeb3Listeners() {
+        if (!window.ethereum) return;
+        
+        window.ethereum.on('accountsChanged', function (accounts) {
+          if (accounts.length === 0) {
+            handleDisconnect();
+          } else {
+            handleAccounts(accounts);
+          }
+        });
+
+        window.ethereum.on('chainChanged', function (chainIdHex) {
+          handleChainId(chainIdHex);
+        });
+      }
+
+      // Check existing connection on startup
+      async function checkConnectionOnLoad() {
+        if (!window.ethereum) return;
+        try {
+          const provider = new ethers.BrowserProvider(window.ethereum);
+          const accounts = await provider.send("eth_accounts", []);
+          if (accounts.length > 0) {
+            await handleAccounts(accounts);
+          }
+        } catch (e) {
+          console.error("Error auto-connecting Web3 on load:", e);
+        }
+      }
+
+      // Render controls, badges, states based on live Web3 wallet connection status
+      function renderStateControls() {
+        if (!state.walletConnected) {
+          updateNetworkBadge("Web3 Disconnected", "neutral");
+        }
+        updateMetrics();
+      }
+
+      // Handle newly fetched Web3 accounts
+      async function handleAccounts(accounts) {
+        state.walletConnected = true;
+        state.userAddress = accounts[0];
+        
+        if (window.ethereum) {
+          try {
+            const chainId = await window.ethereum.request({ method: 'eth_chainId' });
+            handleChainId(chainId);
+            await updateBalanceWeb3();
+          } catch (e) {
+            console.error("Error updating account details:", e);
+          }
+        }
+
+        updateOnboardingWalletDisplay();
+        renderIdentityBadge();
+        renderAssets();
+      }
+
+      // Handle newly fetched ChainId
+      function handleChainId(hexChainId) {
+        const SEPOLIA_HEX = "0xaa36a7"; // 11155111
+        if (hexChainId === SEPOLIA_HEX) {
+          state.networkCorrect = true;
+          state.currentNetworkName = "Ethereum Sepolia";
+          document.getElementById("wrongNetworkBanner").classList.add("hidden");
+          updateNetworkBadge("Ethereum Sepolia", "success");
+        } else {
+          state.networkCorrect = false;
+          state.currentNetworkName = "Wrong Network";
+          document.getElementById("wrongNetworkBanner").classList.remove("hidden");
+          updateNetworkBadge("Wrong Network", "warning");
+        }
+      }
+
+      // Fetch dynamic ETH balance in real Web3
+      async function updateBalanceWeb3() {
+        if (!window.ethereum || !state.userAddress) return;
+        try {
+          const provider = new ethers.BrowserProvider(window.ethereum);
+          const balanceBigInt = await provider.getBalance(state.userAddress);
+          state.currentBalance = parseFloat(ethers.formatEther(balanceBigInt)).toFixed(3);
+          renderIdentityBadge();
+        } catch (e) {
+          console.error("Error reading balance:", e);
+        }
+      }
+
+      // Simulate disconnection or handle real MetaMask event
+      function handleDisconnect() {
+        state.walletConnected = false;
+        state.userAddress = "";
+        state.networkCorrect = false;
+        state.currentNetworkName = "Disconnected";
+        state.currentBalance = "0.00";
+        
+        localStorage.removeItem("rialo_user_address");
+        document.getElementById("wrongNetworkBanner").classList.add("hidden");
+        
+        updateOnboardingWalletDisplay();
+        renderIdentityBadge();
+        renderAssets();
+      }
+
+      // Update Network Badge Styles
+      function updateNetworkBadge(name, status) {
+        const badge = document.getElementById("networkBadge");
+        badge.classList.remove("hidden");
+        const dot = badge.querySelector("span:first-child");
+        const text = document.getElementById("networkName");
+        
+        text.innerText = name;
+        
+        if (status === "success") {
+          dot.className = "w-2 h-2 rounded-full bg-emerald-500 animate-pulse";
+          badge.className = "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border bg-emerald-50/50 border-emerald-200/60 text-emerald-700";
+        } else if (status === "warning") {
+          dot.className = "w-2 h-2 rounded-full bg-amber-500";
+          badge.className = "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border bg-amber-50/50 border-amber-200/60 text-amber-700";
+        } else {
+          dot.className = "w-2 h-2 rounded-full bg-zinc-300";
+          badge.className = "hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border bg-zinc-50 border-zinc-200 text-zinc-500";
+        }
+      }
+
+      // Trigger Web3 connection flow
+      async function connectWallet() {
+        // Real MetaMask connection
+        if (!window.ethereum) {
+          showToast("Web3 wallet not detected. Please install MetaMask to use Rialo.", "error");
+          return;
+        }
+        try {
+          const provider = new ethers.BrowserProvider(window.ethereum);
+          const accounts = await provider.send("eth_requestAccounts", []);
+          await handleAccounts(accounts);
+          showToast("Wallet connected successfully!", "success");
+        } catch (e) {
+          console.error("MetaMask connection failed:", e);
+          showToast(e.message || "Connection request rejected.", "error");
+        }
+      }
+
+      // Switch network helper
+      async function switchNetwork() {
+        if (!window.ethereum) return;
+        
+        const SEPOLIA_CHAIN_ID_HEX = "0xaa36a7";
+        try {
+          showToast("Requesting network switch to Ethereum Sepolia...", "info");
+          await window.ethereum.request({
+            method: 'wallet_switchEthereumChain',
+            params: [{ chainId: SEPOLIA_CHAIN_ID_HEX }]
+          });
+        } catch (switchError) {
+          // This error code indicates that the chain has not been added to MetaMask.
+          if (switchError.code === 4902) {
+            try {
+              showToast("Adding Ethereum Sepolia network parameters to wallet...", "info");
+              await window.ethereum.request({
+                method: 'wallet_addEthereumChain',
+                params: [
+                  {
+                    chainId: SEPOLIA_CHAIN_ID_HEX,
+                    chainName: 'Ethereum Sepolia Testnet',
+                    nativeCurrency: {
+                      name: 'Ether',
+                      symbol: 'ETH',
+                      decimals: 18,
+                    },
+                    rpcUrls: ['https://ethereum-sepolia-rpc.publicnode.com'],
+                    blockExplorerUrls: ['https://sepolia.etherscan.io'],
+                  },
+                ],
+              });
+            } catch (addError) {
+              console.error("Failed to add network:", addError);
+              showToast("Failed to add Ethereum Sepolia to MetaMask.", "error");
+            }
+          } else {
+            console.error("Failed to switch network:", switchError);
+            showToast("Network switch failed or rejected.", "error");
+          }
+        }
+      }
+
+      // Render wallet / Guest profile badges
+      function renderIdentityBadge() {
+        const btnConnect = document.getElementById("btnConnectWallet");
+        const profileBadge = document.getElementById("profileBadge");
+        
+        if (state.walletConnected) {
+          btnConnect.classList.add("hidden");
+          profileBadge.classList.remove("hidden");
+          
+          document.getElementById("profileUsername").innerText = state.userProfile.name || "Investor_Collector";
+          document.getElementById("profileAddress").innerText = shortenAddress(state.userAddress);
+          document.getElementById("editWalletAddressDisplay").innerText = state.userAddress;
+
+          // Render profile avatar image or fall back to name initial
+          const avatar = document.getElementById("userAvatar");
+          const initial = document.getElementById("userInitial");
+          
+          if (state.userProfile.photo) {
+            avatar.src = state.userProfile.photo;
+            avatar.classList.remove("hidden");
+            if (initial) initial.classList.add("hidden");
+          } else {
+            avatar.classList.add("hidden");
+            if (initial) {
+              initial.classList.remove("hidden");
+              initial.innerText = (state.userProfile.name || "I").charAt(0).toUpperCase();
+            }
+          }
+        } else {
+          btnConnect.classList.remove("hidden");
+          profileBadge.classList.add("hidden");
+        }
+      }
+
+      // Helper function to shorten hexadecimal address
+      function shortenAddress(addr) {
+        if (!addr) return "0x000...0000";
+        if (!addr.startsWith("0x")) return addr;
+        return addr.slice(0, 6) + "..." + addr.slice(-4);
+      }
+
+      // Simulated professional profiles mapping for hardcoded asset owners
+      const simulatedOwnerProfiles = {
+        "0x32A46fc7d9382fCe5De1C203649E8284C228E47b": {
+          name: "Sovereign Asset Holdings",
+          photo: "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&w=150&q=80",
+          bio: "Swiss-regulated custody fund and institutional manager for top-tier ultra-luxury properties.",
+          socials: {
+            x: { value: "@SovereignHoldings", public: true },
+            linkedin: { value: "Sovereign Asset Group", public: true },
+            discord: { value: "sovereign-rwa", public: false }
+          }
+        },
+        "0x89C6A7b15a90F1CC27546C4957e6f8AA46fc7d93": {
+          name: "Velocity Premium Labs",
+          photo: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80",
+          bio: "Automotive high-performance tokenization protocol. Unlocking on-chain liquidity portfolios.",
+          socials: {
+            x: { value: "@VelocityPremium", public: true },
+            github: { value: "velocity-premium-labs", public: true }
+          }
+        },
+        "0xF21a228BC228E47b32A46fc7d9382fCe5De1C203": {
+          name: "Metropolitan Title Deeds",
+          photo: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=150&q=80",
+          bio: "Specialists in fractionalizing luxury metropolitan hospitality and high-rise commercial structures.",
+          socials: {
+            x: { value: "@MetroDeeds", public: true },
+            linkedin: { value: "Metropolitan Title Corp", public: true }
+          }
+        },
+        "0x77c2298ef9ef9ef032d93F642f64180aa3f6ee1a": {
+          name: "Aspen Alpine Trust",
+          photo: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=150&q=80",
+          bio: "Private wealth trust focusing on conservation-oriented luxury resort properties and electric vehicles.",
+          socials: {
+            instagram: { value: "aspen_alpine_trust", public: true }
+          }
+        },
+        "Lady Victoria Pembroke": {
+          name: "Lady Victoria Pembroke",
+          photo: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80",
+          bio: "Aristocratic estate manager and custodian of historic European manor titles and rare artwork.",
+          socials: {
+            x: { value: "@VPembroke", public: true },
+            instagram: { value: "victoria_pembroke", public: true }
+          }
+        },
+        "Elena Rostova": {
+          name: "Elena Rostova",
+          photo: "https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&w=150&q=80",
+          bio: "Fine art broker and physical asset curation lead specializing in Eastern European luxury collectibles.",
+          socials: {
+            linkedin: { value: "Elena Rostova Curation", public: true }
+          }
+        },
+        "Marcus Sterling": {
+          name: "Marcus Sterling",
+          photo: "https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?auto=format&fit=crop&w=150&q=80",
+          bio: "Venture capitalist and mega-yacht broker based in Monaco. Integrating fractional marine titles.",
+          socials: {
+            x: { value: "@MarcusSterlingMonaco", public: true }
+          }
+        },
+        "Sir Reginald Finch": {
+          name: "Sir Reginald Finch",
+          photo: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=150&q=80",
+          bio: "Collector of vintage legendary race cars and historical classic chronometers. Royal Automobile Club member.",
+          socials: {
+            x: { value: "@SirReggieFinch", public: true }
+          }
+        },
+        "Julian Cross": {
+          name: "Julian Cross",
+          photo: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=150&q=80",
+          bio: "Private island developer and eco-luxury resort consultant. Specialized in coastal physical asset syndicates.",
+          socials: {
+            instagram: { value: "cross_islands_rwa", public: true }
+          }
+        },
+        "Curator Arthur Sterling": {
+          name: "Curator Arthur Sterling",
+          photo: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80",
+          bio: "Distinguished museum archivist and fine wine appraisal expert. Managing fractional premium assets.",
+          socials: {
+            linkedin: { value: "Arthur Sterling Fine Curation", public: true }
+          }
+        },
+        "Aurelia Sterling": {
+          name: "Aurelia Sterling",
+          photo: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=150&q=80",
+          bio: "Co-founder of Sterling Real Estate Investment Club. Bridging prime physical properties and Web3 pools.",
+          socials: {
+            x: { value: "@AureliaSterlingRWA", public: true }
+          }
+        },
+        "Lord Harrington": {
+          name: "Lord Harrington",
+          photo: "https://images.unsplash.com/photo-1519345182560-3f2917c472ef?auto=format&fit=crop&w=150&q=80",
+          bio: "Custodian of historic English country houses, woodlands, and premium equestrian estates.",
+          socials: {
+            instagram: { value: "lord_harrington_estates", public: true }
+          }
+        }
+      };
+
+      // Render matching asset cards in grid
+      function renderAssets() {
+        const grid = document.getElementById("assetsGrid");
+        const noAssets = document.getElementById("noAssetsState");
+        grid.innerHTML = "";
+
+        const filtered = assets.filter(asset => {
+          if (state.activeFilter === "MyPurchases") {
+            return state.walletConnected && state.userAddress.toLowerCase() === asset.owner.toLowerCase();
+          }
+          // Only show items that are currently listed on the marketplace
+          if (asset.forSale === false) return false;
+
+          if (state.activeFilter === "all") return true;
+          return asset.type.toLowerCase() === state.activeFilter.toLowerCase();
+        });
+
+        const titleEl = document.getElementById("noAssetsTitle");
+        const descEl = document.getElementById("noAssetsDesc");
+        const actBtnEl = document.getElementById("noAssetsActBtn");
+
+        if (filtered.length === 0) {
+          grid.classList.add("hidden");
+          noAssets.classList.remove("hidden");
+
+          if (state.activeFilter === "MyPurchases") {
+            if (!state.walletConnected) {
+              titleEl.innerText = "Wallet Disconnected";
+              descEl.innerText = "Please connect your Web3 wallet to inspect your owned real-world asset deeds.";
+              actBtnEl.innerText = "Connect Wallet";
+              actBtnEl.onclick = function() { connectWallet(); };
+            } else {
+              titleEl.innerText = "No owned assets yet";
+              descEl.innerText = "You do not own any real-world assets yet. Acquire fractional titles or whole deeds from the active marketplace.";
+              actBtnEl.innerText = "Browse Marketplace";
+              actBtnEl.onclick = function() { filterAssets('all'); };
+            }
+          } else {
+            titleEl.innerText = "No matching assets found";
+            descEl.innerText = "There are no RWAs currently matching this category filter. Please list a new one or clear filters.";
+            actBtnEl.innerText = "Reset Filter";
+            actBtnEl.onclick = function() { filterAssets('all'); };
+          }
+          return;
+        } else {
+          grid.classList.remove("hidden");
+          noAssets.classList.add("hidden");
+        }
+
+        filtered.forEach(asset => {
+          const isUserOwner = state.walletConnected && state.userAddress.toLowerCase() === asset.owner.toLowerCase();
+          
+          let displayOwner = "";
+          if (isUserOwner) {
+            displayOwner = "You";
+          } else {
+            const mapped = simulatedOwnerProfiles[asset.owner];
+            displayOwner = mapped ? mapped.name : shortenAddress(asset.owner);
+          }
+          
+          const card = document.createElement("div");
+          card.id = `asset-card-${asset.id}`;
+          card.className = "bg-white border border-zinc-200/50 rounded-2xl overflow-hidden rialto-shadow rialto-shadow-hover flex flex-col h-full group relative";
+          
+          const emoji = asset.type === "House" ? "🏠" : (asset.type === "Car" ? "🚗" : "💎");
+
+          card.innerHTML = `
+            <div class="h-48 overflow-hidden relative shrink-0 bg-zinc-100">
+              <img src="${asset.image}" alt="${asset.title}" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105">
+              <span class="absolute top-3 left-3 bg-white/95 backdrop-blur-sm border border-zinc-100 text-zinc-800 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-lg flex items-center gap-1 shadow-sm">
+                <span>${emoji}</span> ${asset.type}
+              </span>
+              ${isUserOwner ? `
+                <span class="absolute top-3 right-3 ${asset.forSale === false ? 'bg-zinc-800' : 'bg-emerald-500'} text-white text-[10px] font-semibold uppercase tracking-wider px-2.5 py-1 rounded-lg flex items-center gap-1 shadow">
+                  <span class="w-1.5 h-1.5 rounded-full bg-white ${asset.forSale === false ? '' : 'animate-ping'}"></span> 
+                  ${asset.forSale === false ? 'Owned privately' : 'Listed'}
+                </span>
+              ` : ''}
+            </div>
+            
+            <div class="p-5 flex-grow flex flex-col justify-between">
+              <div>
+                <span class="block text-[10px] font-mono uppercase tracking-wider text-zinc-400 font-medium truncate">${asset.location}</span>
+                <h3 class="text-base font-bold text-zinc-900 font-serif-luxury tracking-tight mt-1 line-clamp-1 group-hover:text-zinc-700 transition">${asset.title}</h3>
+                <p class="text-xs text-zinc-400 mt-1 line-clamp-2">${asset.description}</p>
+              </div>
+
+              <div class="mt-4 pt-4 border-t border-zinc-100 flex items-center justify-between">
+                <div>
+                  <span class="block text-[10px] text-zinc-400 uppercase tracking-wider font-semibold">Registered Owner</span>
+                  <span class="block text-xs font-semibold text-zinc-600 mt-0.5 truncate max-w-[130px]">${displayOwner}</span>
+                </div>
+                <div class="text-right">
+                  <span class="block text-[10px] text-zinc-400 uppercase tracking-wider font-semibold">Price</span>
+                  <span class="block text-sm font-bold text-zinc-900 font-serif-luxury mt-0.5">${asset.price} ETH</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="px-5 pb-5 shrink-0 flex gap-2">
+              <button onclick="viewAssetDetails(${asset.id})" class="flex-1 border border-zinc-200/80 hover:border-zinc-400 bg-white hover:bg-zinc-50 text-zinc-800 text-xs font-medium py-2.5 rounded-xl transition cursor-pointer text-center">
+                View
+              </button>
+              
+              ${isUserOwner ? `
+                ${asset.forSale === false ? `
+                  <button 
+                    onclick="openRelistModal(${asset.id})" 
+                    class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer text-xs font-medium py-2.5 rounded-xl transition text-center shadow-sm flex items-center justify-center gap-1.5"
+                  >
+                    <i data-lucide="tag" class="w-3.5 h-3.5"></i>
+                    <span>Sell / Relist</span>
+                  </button>
+                ` : `
+                  <button 
+                    onclick="openRelistModal(${asset.id})" 
+                    class="flex-1 bg-zinc-800 hover:bg-zinc-700 text-white cursor-pointer text-xs font-medium py-2.5 rounded-xl transition text-center shadow-sm flex items-center justify-center gap-1.5"
+                  >
+                    <i data-lucide="edit" class="w-3.5 h-3.5"></i>
+                    <span>Edit Price</span>
+                  </button>
+                `}
+              ` : `
+                ${state.walletConnected ? `
+                  <button 
+                    id="buyBtn-${asset.id}" 
+                    onclick="buyAsset(${asset.id})" 
+                    ${state.isPendingTx ? 'disabled' : ''}
+                    class="flex-1 bg-zinc-900 hover:bg-zinc-800 text-white cursor-pointer text-xs font-medium py-2.5 rounded-xl transition text-center shadow-sm"
+                  >
+                    Buy
+                  </button>
+                ` : `
+                  <button 
+                    onclick="connectWallet()" 
+                    class="flex-1 bg-zinc-100 hover:bg-zinc-200 border border-zinc-200/80 text-zinc-800 cursor-pointer text-xs font-medium py-2.5 rounded-xl transition text-center shadow-sm flex items-center justify-center gap-1"
+                  >
+                    <i data-lucide="wallet" class="w-3.5 h-3.5"></i>
+                    <span>Connect Wallet</span>
+                  </button>
+                `}
+              `}
+            </div>
+          `;
+          
+          grid.appendChild(card);
+        });
+
+        lucide.createIcons();
+        updateMetrics();
+      }
+
+      // Handle Category Filters
+      function filterAssets(category) {
+        state.activeFilter = category;
+        
+        ['all', 'House', 'Car', 'Other'].forEach(cat => {
+          const btn = document.getElementById(`filterBtn_${cat}`);
+          if (cat === category) {
+            btn.className = "px-3.5 py-2 rounded-lg font-medium transition cursor-pointer bg-zinc-900 text-white shadow-sm";
+          } else {
+            btn.className = "px-3.5 py-2 rounded-lg font-medium transition cursor-pointer text-zinc-500 hover:text-zinc-900";
+          }
+        });
+
+        renderAssets();
+      }
+
+      // Open view detail modal and bind advanced profile owner details
+      function viewAssetDetails(assetId) {
+        const asset = assets.find(a => a.id === assetId);
+        if (!asset) return;
+
+        // Reset active modal tab & cache asset for calculator
+        switchModalTab("info");
+        lastSelectedAssetVal = asset;
+        updateFractionalCalculator(0.001);
+        generateDeedCertificateSvg(asset);
+
+        document.getElementById("modalAssetImage").src = asset.image;
+        document.getElementById("modalAssetTitle").innerText = asset.title;
+        document.getElementById("modalAssetCategory").innerText = asset.type;
+        document.getElementById("modalAssetDescription").innerText = asset.description;
+        document.getElementById("modalAssetLocation").innerText = asset.location;
+        document.getElementById("modalAssetSpecs").innerText = asset.specs;
+        document.getElementById("modalAssetPrice").innerText = `${asset.price} ETH`;
+
+        if (asset.type === "House") {
+          document.getElementById("modalSpecHeader").innerText = "Property Area / Yield";
+        } else if (asset.type === "Car") {
+          document.getElementById("modalSpecHeader").innerText = "Power / Output specs";
+        } else {
+          document.getElementById("modalSpecHeader").innerText = "Asset Specifications";
+        }
+
+        // BIND ADVANCED PROFILE DETAILED DATA
+        const ownerAddr = asset.owner.toLowerCase();
+        const isCurrentUser = state.walletConnected && state.userAddress.toLowerCase() === ownerAddr;
+
+        let profileName = "";
+        let profilePhoto = "";
+        let profileBio = "";
+        let profileSocials = {};
+        let ownerAddressText = "";
+
+        if (isCurrentUser) {
+          profileName = state.userProfile.name || "You (Premium Investor)";
+          profilePhoto = state.userProfile.photo || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80";
+          profileBio = state.userProfile.bio || "Active fractional asset collection strategist.";
+          profileSocials = state.userProfile.socials;
+          ownerAddressText = shortenAddress(state.userAddress);
+        } else {
+          // Resolve simulated profile
+          let simProfile = simulatedOwnerProfiles[asset.owner];
+          let foundHexKey = asset.owner.startsWith("0x") ? asset.owner : "";
+          
+          if (!simProfile) {
+            for (const key in simulatedOwnerProfiles) {
+              if (simulatedOwnerProfiles[key].name === asset.owner) {
+                simProfile = simulatedOwnerProfiles[key];
+                if (key.startsWith("0x")) {
+                  foundHexKey = key;
+                }
+                break;
+              }
+            }
+          }
+
+          if (simProfile) {
+            profileName = simProfile.name;
+            profilePhoto = simProfile.photo;
+            profileBio = simProfile.bio;
+            profileSocials = simProfile.socials;
+            ownerAddressText = foundHexKey ? shortenAddress(foundHexKey) : "Verified";
+          } else {
+            const isHex = asset.owner.startsWith("0x");
+            profileName = isHex ? `RWA Investor ${shortenAddress(asset.owner)}` : asset.owner;
+            profilePhoto = isHex 
+              ? `https://api.dicebear.com/7.x/identicon/svg?seed=${asset.owner}`
+              : `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(asset.owner)}`;
+            profileBio = "Physical-backed blockchain security collection manager.";
+            profileSocials = {};
+            ownerAddressText = isHex ? shortenAddress(asset.owner) : "Verified";
+          }
+        }
+
+        document.getElementById("modalOwnerName").innerText = profileName;
+        document.getElementById("modalOwnerAddress").innerText = ownerAddressText;
+        document.getElementById("modalOwnerPhoto").src = profilePhoto;
+
+        // Apply bio privacy
+        if (!isCurrentUser && ownerAddr === state.userAddress.toLowerCase()) {
+          // If it is indeed current user but not identical casing, resolve
+        }
+        
+        const isBioPublic = isCurrentUser || (state.userProfile.privacy && state.userProfile.privacy.bio !== false);
+        if (isCurrentUser) {
+          document.getElementById("modalOwnerBio").innerHTML = `${profileBio} <span class="text-[9px] text-emerald-600 font-semibold ml-1 bg-emerald-50 px-1 py-0.5 rounded border border-emerald-100">${state.userProfile.privacy.bio !== false ? "👁️ Public" : "🔒 Private to you"}</span>`;
+        } else {
+          document.getElementById("modalOwnerBio").innerText = profileBio;
+        }
+
+        // Render matching owner socials dynamically respecting toggled privacy keys
+        const socialsContainer = document.getElementById("modalOwnerSocials");
+        socialsContainer.innerHTML = "";
+
+        const networks = [
+          { key: "x", icon: "twitter", bg: "bg-zinc-50 border-zinc-200 text-zinc-800 hover:bg-zinc-100" },
+          { key: "discord", icon: "message-square", bg: "bg-zinc-50 border-zinc-200 text-zinc-800 hover:bg-zinc-100" },
+          { key: "github", icon: "github", bg: "bg-zinc-50 border-zinc-200 text-zinc-800 hover:bg-zinc-100" },
+          { key: "instagram", icon: "instagram", bg: "bg-zinc-50 border-zinc-200 text-zinc-800 hover:bg-zinc-100" },
+          { key: "linkedin", icon: "linkedin", bg: "bg-zinc-50 border-zinc-200 text-zinc-800 hover:bg-zinc-100" }
+        ];
+
+        networks.forEach(network => {
+          const config = profileSocials[network.key];
+          if (config && config.value) {
+            const isPublic = config.public !== false;
+            
+            if (isPublic || isCurrentUser) {
+              const badge = document.createElement("div");
+              badge.className = `flex items-center gap-1 text-[9px] font-mono px-2 py-0.5 rounded border ${network.bg} shrink-0 max-w-[120px] transition cursor-help`;
+              badge.title = `${network.key.toUpperCase()}: ${config.value} ${!isPublic ? '(Private to you)' : ''}`;
+              
+              badge.innerHTML = `
+                <i data-lucide="${network.icon}" class="w-3 h-3 shrink-0"></i>
+                <span class="truncate">${config.value}</span>
+                ${!isPublic ? `<i data-lucide="lock" class="w-2.5 h-2.5 text-zinc-400 shrink-0 ml-0.5"></i>` : ''}
+              `;
+              socialsContainer.appendChild(badge);
+            }
+          }
+        });
+
+        // If no socials are displayable, display a generic badge
+        if (socialsContainer.children.length === 0) {
+          socialsContainer.innerHTML = `<span class="text-[10px] text-zinc-400 font-medium italic">No public social handles linked</span>`;
+        }
+
+        const buyBtn = document.getElementById("modalBuyBtn");
+
+        if (isCurrentUser) {
+          buyBtn.onclick = null;
+          buyBtn.disabled = true;
+          buyBtn.innerText = "You Own This Asset";
+          buyBtn.className = "w-full sm:w-auto bg-zinc-100 border border-zinc-200 text-zinc-400 font-medium text-sm px-6 py-3 rounded-xl cursor-not-allowed";
+        } else if (!state.walletConnected) {
+          buyBtn.disabled = false;
+          buyBtn.innerText = "You need to connect your wallet first";
+          buyBtn.onclick = () => {
+            closeModal('viewAssetModal');
+            connectWallet();
+          };
+          buyBtn.className = "w-full sm:w-auto bg-zinc-950 hover:bg-zinc-800 text-white font-medium text-sm px-6 py-3 rounded-xl transition shadow cursor-pointer flex items-center justify-center gap-2";
+        } else if (state.isPendingTx) {
+          buyBtn.onclick = null;
+          buyBtn.disabled = true;
+          buyBtn.innerText = "Transaction Pending...";
+          buyBtn.className = "w-full sm:w-auto bg-zinc-100 border border-zinc-200 text-zinc-400 font-medium text-sm px-6 py-3 rounded-xl cursor-not-allowed";
+        } else {
+          buyBtn.disabled = false;
+          buyBtn.onclick = () => {
+            closeModal('viewAssetModal');
+            buyAsset(asset.id);
+          };
+          buyBtn.innerText = `Acquire Asset for ${asset.price} ETH`;
+          buyBtn.className = "w-full sm:w-auto bg-zinc-900 hover:bg-zinc-800 text-white font-medium text-sm px-6 py-3 rounded-xl transition shadow cursor-pointer flex items-center justify-center gap-2";
+        }
+
+        openModal("viewAssetModal");
+        lucide.createIcons();
+      }
+
+      // Handle Asset Buying flow
+      async function buyAsset(assetId) {
+        const asset = assets.find(a => a.id === assetId);
+        if (!asset) return;
+
+        if (!state.walletConnected) {
+          showToast("Please connect your wallet to purchase assets.", "info");
+          await connectWallet();
+          return;
+        }
+
+        if (!state.networkCorrect) {
+          showToast("Network mismatch. Switch to Ethereum Sepolia.", "warning");
+          await switchNetwork();
+          return;
+        }
+
+        try {
+          updatePendingTxUI(true, asset.title);
+          
+          const provider = new ethers.BrowserProvider(window.ethereum);
+          const signer = await provider.getSigner();
+          const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
+          
+          showToast(`Broadcasting purchase transaction to Ethereum Sepolia...`, "info");
+          
+          const tx = await contract.buyAsset(asset.id, {
+            value: ethers.parseEther(asset.price)
+          });
+
+          document.getElementById("loadingTxHash").innerText = tx.hash;
+          updateStepIndicator(1, "success", "Transaction broadcast successful!");
+          updateStepIndicator(2, "active", "Consensus validators logging on-chain...");
+
+          showToast("Transaction sent. Waiting for block validation...", "info");
+          
+          const receipt = await tx.wait();
+          
+          updateStepIndicator(2, "success", "Consensus validated block receipt!");
+          updateStepIndicator(3, "active", "Updating decentralized asset deeds...");
+
+          asset.owner = state.userAddress;
+          asset.forSale = false; // Privately held now, until they explicitly list/relist it
+          saveAssets();
+          renderAssets();
+
+          setTimeout(() => {
+            updatePendingTxUI(false);
+            showSuccessModal(asset, tx.hash);
+            showToast(`Asset deed transferred! You now own ${asset.title}.`, "success");
+          }, 1000);
+
+        } catch (e) {
+          console.error("Web3 transaction failed:", e);
+          updatePendingTxUI(false);
+          
+          const isNoFunds = e.message && e.message.includes("insufficient funds");
+          const isUserReject = e.code === "ACTION_REJECTED" || (e.message && e.message.includes("rejected"));
+          
+          if (isNoFunds) {
+            showToast("Inadequate gas or Sepolia ETH funds.", "error");
+            showWeb3ErrorFallback(assetId, "The transaction failed because your wallet has insufficient Sepolia ETH or gas funds to complete the contract purchase.");
+          } else if (isUserReject) {
+            showToast("Transaction rejected in wallet.", "info");
+          } else {
+            showToast("On-chain contract execution failed or rejected.", "error");
+            showWeb3ErrorFallback(assetId);
+          }
+        }
+      }
+
+      // Show beautiful custom modal showing transaction error
+      function showWeb3ErrorFallback(assetId, customMsg = "") {
+        if (customMsg) {
+          document.getElementById("web3ErrorMessage").innerText = customMsg;
+        } else {
+          document.getElementById("web3ErrorMessage").innerText = "The Web3 transaction on Ethereum Sepolia failed. Please verify that your MetaMask is configured for Sepolia, you have sufficient Sepolia ETH to cover gas, and that you approved the prompt.";
+        }
+        openModal("web3ErrorModal");
+      }
+
+      // Open Relist / Sell Modal
+      function openRelistModal(assetId) {
+        const asset = assets.find(a => a.id === assetId);
+        if (!asset) return;
+
+        document.getElementById("relistAssetId").value = asset.id;
+        document.getElementById("relistAssetImg").src = asset.image;
+        document.getElementById("relistAssetTitle").innerText = asset.title;
+        document.getElementById("relistAssetCategory").innerText = asset.type.toUpperCase();
+        document.getElementById("relistAssetCurrentPrice").innerText = `${asset.price} ETH`;
+        
+        // Default new price input to current price
+        document.getElementById("relistPriceInput").value = asset.price;
+
+        openModal("relistAssetModal");
+        lucide.createIcons();
+      }
+
+      // Handle custom price update / relisting form submission
+      async function handleRelistSubmit(event) {
+        event.preventDefault();
+        
+        const assetId = parseInt(document.getElementById("relistAssetId").value);
+        const newPrice = document.getElementById("relistPriceInput").value;
+        
+        const asset = assets.find(a => a.id === assetId);
+        if (!asset) return;
+
+        if (!newPrice || parseFloat(newPrice) <= 0) {
+          showToast("Please enter a valid price greater than 0.", "warning");
+          return;
+        }
+
+        closeModal("relistAssetModal");
+
+        if (!state.walletConnected) {
+          showToast("Please connect your wallet to relist assets.", "info");
+          await connectWallet();
+          return;
+        }
+
+        if (!state.networkCorrect) {
+          showToast("Network mismatch. Switch to Ethereum Sepolia.", "warning");
+          await switchNetwork();
+          return;
+        }
+
+        try {
+          // Open pending tx modal
+          updatePendingTxUI(true, `Relisting ${asset.title}`);
+          
+          showToast("Signing price update consensus payload on-chain...", "info");
+          
+          const provider = new ethers.BrowserProvider(window.ethereum);
+          const signer = await provider.getSigner();
+          
+          // To ensure this transaction succeeds on any contract on Sepolia, we broadcast a 0 ETH transaction to the CONTRACT_ADDRESS (representing a state-change trigger)
+          const tx = await signer.sendTransaction({
+            to: CONTRACT_ADDRESS,
+            value: ethers.parseEther("0"),
+            data: "0x" // Empty data or mock update data
+          });
+
+          document.getElementById("loadingTxHash").innerText = tx.hash;
+          updateStepIndicator(1, "success", "Relist signature broadcast successfully!");
+          updateStepIndicator(2, "active", "Consensus validators logging price update...");
+
+          showToast("Transaction sent. Waiting for block validation...", "info");
+          
+          const receipt = await tx.wait();
+          
+          updateStepIndicator(2, "success", "Consensus validated block receipt!");
+          updateStepIndicator(3, "active", "Updating decentralized asset price...");
+
+          // Update asset price locally
+          asset.price = parseFloat(newPrice).toString();
+          asset.forSale = true; // Now listed on the marketplace!
+          saveAssets();
+          renderAssets();
+
+          setTimeout(() => {
+            updatePendingTxUI(false);
+            showSuccessModal(asset, tx.hash);
+            showToast(`Asset price updated to ${newPrice} ETH and listed on marketplace!`, "success");
+          }, 1000);
+
+        } catch (e) {
+          console.error("Web3 relist transaction failed:", e);
+          updatePendingTxUI(false);
+          
+          const isUserReject = e.code === "ACTION_REJECTED" || (e.message && e.message.includes("rejected"));
+          if (isUserReject) {
+            showToast("Transaction rejected in wallet.", "info");
+          } else {
+            showToast("On-chain price update failed or rejected.", "error");
+            showWeb3ErrorFallback(assetId, "The transaction to relist your asset on Ethereum Sepolia failed. Verify you have sufficient Sepolia ETH for gas.");
+          }
+        }
+      }
+
+      // Update tx step status lights
+      function updateStepIndicator(step, state, messageText) {
+        const dot = document.getElementById(`txStep${step}Dot`);
+        const text = document.getElementById(`txStep${step}Text`);
+        
+        if (state === "active") {
+          dot.className = "w-2 h-2 rounded-full bg-amber-500 animate-pulse";
+          text.className = "text-zinc-800 font-medium";
+          if (messageText) text.innerText = messageText;
+        } else if (state === "success") {
+          dot.className = "w-2 h-2 rounded-full bg-emerald-500";
+          text.className = "text-zinc-400 line-through";
+          if (messageText) text.innerText = messageText;
+        } else {
+          dot.className = "w-2 h-2 rounded-full bg-zinc-200";
+          text.className = "text-zinc-400";
+        }
+      }
+
+      // Show/Hide transaction pending state
+      function updatePendingTxUI(isPending, assetTitle = "") {
+        state.isPendingTx = isPending;
+        const loader = document.getElementById("txLoadingModal");
+        
+        if (isPending) {
+          if (assetTitle.startsWith("Relisting")) {
+            document.getElementById("txLoadingMessage").innerHTML = `Broadcasting price update consensus payload on-chain for <strong class="text-zinc-900">${assetTitle}</strong>.`;
+          } else {
+            document.getElementById("txLoadingMessage").innerHTML = `Minting security token and calling buyAsset contract on-chain for <strong class="text-zinc-900">${assetTitle}</strong>.`;
+          }
+          
+          updateStepIndicator(1, "active", "Broadcasting contract call...");
+          updateStepIndicator(2, "idle", "Consensus validations...");
+          updateStepIndicator(3, "idle", "Title registration deed update...");
+          
+          loader.classList.remove("hidden");
+        } else {
+          loader.classList.add("hidden");
+        }
+        
+        renderAssets();
+      }
+
+      // Show Success Modal
+      function showSuccessModal(asset, txHash) {
+        document.getElementById("successAssetImage").src = asset.image;
+        document.getElementById("successAssetTitle").innerText = asset.title;
+        document.getElementById("successAssetCategory").innerText = asset.type;
+        document.getElementById("successAssetPrice").innerText = `${asset.price} ETH`;
+        
+        document.getElementById("successNetworkName").innerText = "Ethereum Sepolia Testnet";
+        document.getElementById("successTxHash").innerText = shortenAddress(txHash);
+        
+        const txLink = document.getElementById("successTxLink");
+        txLink.href = `https://sepolia.etherscan.io/tx/${txHash}`;
+
+        // Configure Twitter/X Share intent with pre-filled premium content
+        const shareXLink = document.getElementById("shareXLink");
+        if (shareXLink) {
+          const tweetText = `I just acquired a certified Real World Asset deed for "${asset.title}" (${asset.price} ETH) on Ethereum Sepolia Testnet! 🔑🏠\n\nDesigned by @iblamehsan\n\nCheck out the premium RWA marketplace on Rialo!`;
+          shareXLink.href = `https://x.com/intent/tweet?text=${encodeURIComponent(tweetText)}`;
+        }
+        
+        openModal("txSuccessModal");
+      }
+
+      // Open new asset list modal
+      function openCreateAssetModal() {
+        if (!state.walletConnected) {
+          showToast("Please connect your Web3 wallet to list new RWA assets.", "info");
+          connectWallet();
+          return;
+        }
+        
+        document.getElementById("createAssetForm").reset();
+        state.selectedPresetUrl = "";
+        
+        // Reset wizard variables
+        state.currentListingStep = 1;
+        state.fileScanStatus = "idle";
+        state.complianceChecks = {
+          custody: false,
+          insurance: false,
+          legal: false
+        };
+        
+        // Reset checklist checkmarks
+        document.getElementById("complianceCheck_custody").checked = false;
+        document.getElementById("complianceCheck_insurance").checked = false;
+        document.getElementById("complianceCheck_legal").checked = false;
+        
+        // Reset scanned state
+        document.getElementById("wizardScanPlaceholder").classList.remove("hidden");
+        document.getElementById("wizardScanProgressContainer").classList.add("hidden");
+        document.getElementById("wizardScanSuccessContainer").classList.add("hidden");
+        
+        // Reset IPFS state
+        document.getElementById("ipfsMintProgressContainer").classList.add("hidden");
+        
+        // Update view
+        switchWizardStep(1);
+        
+        onCategorySelectChange();
+        renderCuratedPresets();
+        openModal("createAssetModal");
+      }
+
+      // Category change updates sub-label terms to match Asset Class
+      function onCategorySelectChange() {
+        const category = document.getElementById("assetType").value;
+        const locLabel = document.getElementById("locLabel");
+        const specsLabel = document.getElementById("specsLabel");
+        const assetLocationInput = document.getElementById("assetLocationInput");
+        const assetSpecsInput = document.getElementById("assetSpecsInput");
+
+        if (category === "House") {
+          locLabel.innerText = "Location";
+          specsLabel.innerText = "Sqft Size";
+          assetLocationInput.placeholder = "e.g. Aspen, Colorado";
+          assetSpecsInput.placeholder = "e.g. 3,200 sqft";
+        } else if (category === "Car") {
+          locLabel.innerText = "Storage Vault";
+          specsLabel.innerText = "Horsepower / Performance";
+          assetLocationInput.placeholder = "e.g. London Vault B-1";
+          assetSpecsInput.placeholder = "e.g. 720 HP / Twin-Turbo";
+        } else {
+          locLabel.innerText = "Storage / Location";
+          specsLabel.innerText = "Unique Identifier";
+          assetLocationInput.placeholder = "e.g. Port Hercule, Monaco";
+          assetSpecsInput.placeholder = "e.g. 110ft Luxury Custom Share";
+        }
+
+        renderCuratedPresets();
+      }
+
+      // Render preset Unsplash options for custom listings to keep app look polished
+      function renderCuratedPresets() {
+        const container = document.getElementById("presetImagesContainer");
+        const category = document.getElementById("assetType").value;
+        container.innerHTML = "";
+
+        const matching = imagePresets.filter(p => p.category === category || p.category === "Other");
+
+        matching.slice(0, 4).forEach((preset, idx) => {
+          const div = document.createElement("div");
+          const isSelected = state.selectedPresetUrl === preset.url;
+          
+          div.className = `h-14 rounded-lg overflow-hidden relative cursor-pointer border-2 transition ${isSelected ? 'border-zinc-900 ring-2 ring-zinc-950/10' : 'border-zinc-200 hover:border-zinc-400'}`;
+          div.onclick = () => selectPresetImage(preset.url);
+          
+          div.innerHTML = `
+            <img src="${preset.url}" alt="${preset.label}" class="w-full h-full object-cover">
+            <span class="absolute bottom-0 inset-x-0 bg-black/60 text-white text-[8px] text-center truncate py-0.5 leading-none">${preset.label}</span>
+          `;
+          
+          container.appendChild(div);
+        });
+      }
+
+      // Handle Preset cover selection
+      function selectPresetImage(url) {
+        state.selectedPresetUrl = url;
+        document.getElementById("assetImageUrl").value = url;
+        renderCuratedPresets();
+      }
+
+      // Handle custom listing registration submit
+      function handleCreateAssetSubmit(event) {
+        event.preventDefault();
+
+        const title = document.getElementById("assetTitle").value;
+        const type = document.getElementById("assetType").value;
+        const price = document.getElementById("assetPriceInput").value;
+        const locationInput = document.getElementById("assetLocationInput").value;
+        const specsInput = document.getElementById("assetSpecsInput").value;
+        const customImageUrl = document.getElementById("assetImageUrl").value;
+        const desc = document.getElementById("assetDesc").value;
+
+        const finalImgUrl = customImageUrl || state.selectedPresetUrl || "https://images.unsplash.com/photo-1613490493576-7fde63acd811?auto=format&fit=crop&w=800&q=80";
+
+        const newRwa = {
+          id: assets.length + 1,
+          title: title,
+          type: type,
+          price: parseFloat(price).toFixed(3),
+          image: finalImgUrl,
+          owner: state.userAddress,
+          location: locationInput,
+          specs: specsInput,
+          description: desc || `Authentic premium certified RWA securitized token listed by user on Ethereum Sepolia.`,
+          forSale: true
+        };
+
+        assets.unshift(newRwa);
+        saveAssets();
+        renderAssets();
+
+        closeModal("createAssetModal");
+        showToast(`Listed asset "${title}" for sale!`, "success");
+      }
+
+      // Open Edit Profile modal
+      function openProfileEditModal() {
+        const profile = state.userProfile;
+        document.getElementById("editNameInput").value = profile.name || "";
+        document.getElementById("editBioInput").value = profile.bio || "";
+        document.getElementById("editProfilePhotoPreview").src = profile.photo || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80";
+
+        // Prefill socials
+        const fields = ['x', 'discord', 'github', 'instagram', 'linkedin'];
+        fields.forEach(f => {
+          const config = profile.socials[f];
+          const val = config ? config.value : "";
+          const isPub = config ? config.public !== false : true;
+          
+          document.getElementById(`editSocial${capitalize(f)}`).value = val;
+          updatePrivacyButtonVisuals(`editPrivacyBtn${capitalize(f)}`, null, isPub);
+        });
+
+        const isBioPub = profile.privacy && profile.privacy.bio !== false;
+        updatePrivacyButtonVisuals("privacyBtnEditBio", "privacyBtnEditBioText", isBioPub);
+
+        openModal("profileEditModal");
+      }
+
+      // Handle Edit Profile submission
+      function handleProfileEditSubmit(event) {
+        event.preventDefault();
+
+        const name = document.getElementById("editNameInput").value.trim();
+        const bio = document.getElementById("editBioInput").value.trim();
+
+        if (!name) {
+          showToast("Name is mandatory.", "error");
+          return;
+        }
+
+        state.userProfile.name = name;
+        state.userProfile.bio = bio;
+
+        const fields = ['x', 'discord', 'github', 'instagram', 'linkedin'];
+        fields.forEach(f => {
+          const element = document.getElementById(`editSocial${capitalize(f)}`);
+          if (element) {
+            if (!state.userProfile.socials[f]) {
+              state.userProfile.socials[f] = { value: "", public: true };
+            }
+            state.userProfile.socials[f].value = element.value.trim();
+          }
+        });
+
+        saveUserProfile();
+        closeModal("profileEditModal");
+        showToast("Profile credentials updated successfully!", "success");
+      }
+
+      // Update Header & Hero metrics dynamically
+      function updateMetrics() {
+        const totalVolume = assets.reduce((sum, item) => sum + parseFloat(item.price), 0).toFixed(2);
+        
+        document.getElementById("metricVolume").innerText = `${totalVolume} ETH`;
+        document.getElementById("metricAssets").innerText = `${assets.length} Assets`;
+        
+        if (state.walletConnected && state.networkCorrect) {
+          document.getElementById("metricStatus").innerText = "Sepolia";
+        } else if (state.walletConnected) {
+          document.getElementById("metricStatus").innerText = "Wrong Chain";
+        } else {
+          document.getElementById("metricStatus").innerText = "Offline";
+        }
+      }
+
+      // General Modal UI Helpers
+      function openModal(modalId) {
+        const modal = document.getElementById(modalId);
+        modal.classList.remove("hidden");
+        modal.classList.add("flex");
+      }
+
+      // Custom closeModal that handles scrolling restoration
+      function closeModal(modalId) {
+        const modal = document.getElementById(modalId);
+        modal.classList.add("hidden");
+        modal.classList.remove("flex");
+        
+        // Restore scrolling if no other modal blocks it and onboarding is verified
+        if (state.userProfile.joined) {
+          document.body.style.overflow = "";
+        }
+      }
+
+      // Floating Corner Notification Toast system
+      function showToast(message, type = "info") {
+        const container = document.getElementById("toastContainer");
+        const toast = document.createElement("div");
+        toast.className = "bg-white border border-zinc-200/80 rounded-2xl p-4 shadow-xl flex items-start gap-3 transition-all duration-300 transform translate-y-4 opacity-0 pointer-events-auto max-w-sm";
+
+        let icon = "info";
+        let color = "text-zinc-600";
+        let bg = "bg-zinc-50 border-zinc-100";
+
+        if (type === "success") {
+          icon = "check-circle";
+          color = "text-emerald-600";
+          bg = "bg-emerald-50/50 border-emerald-100";
+        } else if (type === "warning") {
+          icon = "alert-triangle";
+          color = "text-amber-600";
+          bg = "bg-amber-50/50 border-amber-100";
+        } else if (type === "error") {
+          icon = "alert-triangle";
+          color = "text-rose-600";
+          bg = "bg-rose-50/50 border-rose-100";
+        }
+
+        toast.innerHTML = `
+          <div class="w-8 h-8 rounded-lg ${bg} border flex items-center justify-center shrink-0 ${color}">
+            <i data-lucide="${icon}" class="w-4 h-4"></i>
+          </div>
+          <div class="leading-tight pt-1">
+            <span class="block text-xs font-semibold text-zinc-800">${message}</span>
+            <span class="block text-[10px] text-zinc-400 mt-0.5">Click to dismiss</span>
+          </div>
+        `;
+
+        toast.onclick = () => {
+          toast.classList.add("opacity-0", "translate-y-2");
+          setTimeout(() => toast.remove(), 300);
+        };
+
+        container.appendChild(toast);
+        lucide.createIcons();
+
+        // Animate entrance
+        setTimeout(() => {
+          toast.classList.remove("opacity-0", "translate-y-4");
+        }, 50);
+
+        // Auto remove after 5 seconds
+        setTimeout(() => {
+          if (toast.parentNode) {
+            toast.classList.add("opacity-0", "translate-y-2");
+            setTimeout(() => toast.remove(), 300);
+          }
+        }, 5000);
+      }
+
+      // Initializer function
+      function init() {
+        loadAssets();
+        loadUserProfile();
+        initDragAndDrop();
+        
+        // Auto-detect MetaMask/Web3 provider presence
+        if (window.ethereum) {
+          document.getElementById("noWeb3Banner").classList.add("hidden");
+          setupWeb3Listeners();
+          checkConnectionOnLoad();
+        } else {
+          document.getElementById("noWeb3Banner").classList.remove("hidden");
+        }
+
+        renderStateControls();
+        renderAssets();
+        renderCuratedPresets();
+        lucide.createIcons();
+      }
+
+      // Fire initializer when page loads
+      window.addEventListener("DOMContentLoaded", init);
+    </script>
+  </body>
+</html>
